@@ -1,0 +1,75 @@
+---
+
+- name: Disable swap, set SELinux permissive and disable firewall
+  hosts: master, workers
+  gather_facts: false
+  become: true
+  tasks:
+    # ---------------- Disable swap ---------------- #
+    - name: Turn off all swap immediately
+      ansible.builtin.command: swapoff -a
+      changed_when: false
+
+    - name: Remove swap entry from /etc/fstab
+      ansible.posix.mount:
+        name: none  # swap usually doesn’t have a mount point
+        fstype: swap
+        state: absent
+
+    - name: Check if any swap is active (swapon)
+      ansible.builtin.command: swapon --summary
+      register: swapon_output
+      failed_when: swapon_output.stdout != ""
+      changed_when: false
+
+    # ---------------- Set SELinux to permissive ---------------- #
+    - name: Gather only selinux fact
+      ansible.builtin.setup:
+        gather_subset:
+          - selinux
+
+    - name: Set SELinux mode to permissive immediately
+      ansible.builtin.command: 'setenforce 0'
+      changed_when: false
+      when: ansible_facts.selinux.status == "enabled"
+
+    - name: Ensure SELinux is set to permissive in config file
+      ansible.builtin.lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: 'SELINUX=permissive'
+
+    - name: Verify SELinux is in permissive mode
+      ansible.builtin.command: getenforce
+      register: selinux_mode
+      changed_when: false
+
+    - name: Display current SELinux mode
+      ansible.builtin.debug:
+        msg: "Current SELinux mode is: {{ selinux_mode.stdout }}"
+
+    # ---------------- Disable firewall ---------------- #
+    - name: Stop firewalld service
+      ansible.builtin.service:
+        name: firewalld
+        state: stopped
+
+    - name: Disable firewalld service permanently
+      ansible.builtin.service:
+        name: firewalld
+        enabled: false
+      register: firewalld_enabled
+
+    - name: Get firewalld service status
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+      register: firewalld_status
+
+    - name: Display whether firewalld is running
+      ansible.builtin.debug:
+        msg: "Firewalld is {{ 'running' if firewalld_status.status['ActiveState'] == 'active' else 'not running' }}"
+
+    - name: Display whether firewalld is enabled at boot
+      ansible.builtin.debug:
+        msg: "Firewalld is {{ 'enabled' if firewalld_enabled.enabled == true else 'disabled' }} at boot"
