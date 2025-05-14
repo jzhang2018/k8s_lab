@@ -73,3 +73,39 @@
     - name: Display whether firewalld is enabled at boot
       ansible.builtin.debug:
         msg: "Firewalld is {{ 'enabled' if firewalld_enabled.enabled == true else 'disabled' }} at boot"
+
+    # --------------- Enable Required Kernel Modules --------------- #
+    - name: Persistently load required kernel modules
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k8s.conf
+        content: |
+          # for k8s networking
+          overlay # enables an union mount filesystem used by container runtimes
+          br_netfilter # used by container runtimes bridge networking
+
+          # for IPVS-based kube-proxy
+          ip_vs
+          ip_vs_rr
+          ip_vs_wrr
+          ip_vs_sh
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Load kernel modules immediately
+      ansible.builtin.command:
+        cmd: modprobe "{{ item }}"
+      loop: ['overlay', 'br_netfilter', 'ip_vs', 'ip_vs_rr', 'ip_vs_wrr', 'ip_vs_sh']
+      changed_when: false
+
+    # --------------- Sysctl to adjust the kernel parameters for IPV4/IPV6 ip bridge and ip forwarding --------------- #
+    - name: Enables sysctl IPV4/IPV6 networking params
+      ansible.posix.sysctl:
+        name: "{{ item }}"
+        value: '1'
+        state: present
+        reload: true
+      loop: ['net.bridge.bridge-nf-call-iptables', 'net.bridge.bridge-nf-call-ip6tables', 'net.ipv4.ip_forward']
+
+  # --------------- Install container runtime CRI-O --------------- #
+

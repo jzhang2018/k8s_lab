@@ -1,0 +1,57 @@
+---
+- name: Install CRI-O on RHEL 9
+  hosts: master, workers
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Enable codeready-builder repository
+      ansible.builtin.command: >
+        subscription-manager repos --enable codeready-builder-for-rhel-9-{{ ansible_architecture }}-rpms
+      register: codeready_repo
+      failed_when: codeready_repo.rc not in [0, 1]
+      changed_when: "'enabled' in codeready_repo.stdout"
+
+    - name: Enable BaseOS and AppStream repos
+      ansible.builtin.command: >
+        subscription-manager repos
+        --enable rhel-9-for-{{ ansible_architecture }}-baseos-rpms
+        --enable rhel-9-for-{{ ansible_architecture }}-appstream-rpms
+      register: baseos_appstream_repo
+      failed_when: baseos_appstream_repo.rc not in [0, 1]
+      changed_when: "'enabled' in baseos_appstream_repo.stdout"
+
+    - name: Add libcontainers stable repo
+      ansible.builtin.get_url:
+        url: "{{ 'https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/' + os_stream +
+              '/devel:kubic:libcontainers:stable.repo' }}"
+        dest: "/etc/yum.repos.d/devel:kubic:libcontainers:stable.repo"
+        mode: '0644'
+
+    - name: Add CRI-O versioned repo
+      ansible.builtin.get_url:
+        url: "{{ 'https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:' +
+              crio_version + '/' + os_stream + '/devel:kubic:libcontainers:stable:cri-o:' +
+              crio_version + '.repo' }}"
+        dest: "/etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo"
+        mode: '0644'
+
+    - name: Install CRI-O
+      ansible.builtin.dnf:
+        name: cri-o
+        state: present
+
+    - name: Enable and start CRI-O service
+      ansible.builtin.systemd:
+        name: crio
+        enabled: true
+        state: started
+
+    - name: Check CRI-O version
+      ansible.builtin.command: crio --version
+      register: crio_version
+      changed_when: false
+
+    - name: Show CRI-O version
+      ansible.builtin.debug:
+        msg: "{{ crio_version.stdout_lines[0] }}"
