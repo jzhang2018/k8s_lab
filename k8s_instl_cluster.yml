@@ -47,12 +47,12 @@
         dest: ./join-command/
         flat: true
 
-    # ------------ Install Pod network Calico after cluster control plane initialized ------------ #
+    # ------------ Install Pod network Calico after cluster control plane is initialized ------------ #
     - name: Apply Calico CNI
       ansible.builtin.shell: >
-        kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
+        kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v"{{ calico_version }}"/manifests/calico.yaml
       environment:
-        KUBECONFIG: /etc/kubernetes/admin.conf
+        KUBECONFIG: /etc/kubernetes/admin.conf  # for ansible_user to run kubectl command
       changed_when: false
 
 - name: Join worker nodes
@@ -60,7 +60,7 @@
   gather_facts: false
   become: true
   tasks:
-    - name: Copy join script from controller
+    - name: Copy join script from Ansible controller
       ansible.builtin.copy:
         src: ./join-command/kubeadm_join.sh
         dest: /tmp/kubeadm_join.sh

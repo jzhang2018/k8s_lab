@@ -99,6 +99,8 @@
       changed_when: false
 
     # --------------- Sysctl to adjust the kernel parameters for IPV4/IPV6 ip bridge and ip forwarding --------------- #
+    # TODO - to set it up permanently
+    
     - name: Enables sysctl IPV4/IPV6 networking params
       ansible.posix.sysctl:
         name: "{{ item }}"
@@ -107,5 +109,5 @@
         reload: true
       loop: ['net.bridge.bridge-nf-call-iptables', 'net.bridge.bridge-nf-call-ip6tables', 'net.ipv4.ip_forward']
 
-  # --------------- Install container runtime CRI-O --------------- #
+
 

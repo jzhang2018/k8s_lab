@@ -5,8 +5,8 @@
 192.168.184.134
 
 [all:vars]
-ansible_user=iacuser    # non-root
-k8s_user=iacuser        # non-root
+ansible_user=iacuser
+k8s_user=iacuser
 
 # k8s version
 k8s_version='1.28'
@@ -16,3 +16,6 @@ crio_version='1.28'
 
 # openSUSE Kubic project does not provide repo for RHEL 9 stream, we use CentOS 9 Stream
 os_stream=CentOS_9_Stream
+
+# Calico version
+calico_version='3.30.0'
