@@ -44,7 +44,7 @@
     - name: Fetch join command to Ansible controller from master node for later use
       ansible.builtin.fetch:
         src: /tmp/kubeadm_join.sh
-        dest: ./join-command/
+        dest: ./k8s-join-command/
         flat: true
 
     # ------------ Install Pod network Calico after cluster control plane is initialized ------------ #
@@ -62,7 +62,7 @@
   tasks:
     - name: Copy join script from Ansible controller
       ansible.builtin.copy:
-        src: ./join-command/kubeadm_join.sh
+        src: ./k8s-join-command/kubeadm_join.sh
         dest: /tmp/kubeadm_join.sh
         mode: '0755'
 
