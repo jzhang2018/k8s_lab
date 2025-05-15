@@ -9,8 +9,8 @@
 - name: K8s Container Runtime CRI-O Installation Playbook
   ansible.builtin.import_playbook: k8s_instl_crio.yml
 
+- name: Include K8s System Assert Playbook
+  ansible.builtin.import_playbook: k8s_sys_assert.yml
+
 - name: K8s Cluster Creation Playbook
   ansible.builtin.import_playbook: k8s_instl_cluster.yml
-
-# - name: Include K8s Verification Playbook
-#   ansible.builtin.import_playbook: k8s_verif.yml

@@ -1,0 +1,74 @@
+---
+
+- name: Run k8s cluster verification from Ansible controller
+  hosts: localhost  # ansible controller
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Check Kubernetes API server health via url
+      ansible.builtin.uri:
+        url: "https://{{ groups['master'][0] }}:6443/healthz"
+        # url: "https://localhost:6443/healthz"
+        method: GET
+        validate_certs: false
+        status_code: 200
+      register: api_health
+      ignore_errors: true
+
+    - name: Assert - API server is healthy
+      ansible.builtin.assert:
+        that:
+          - "api_health.status == 200"
+        fail_msg: "Assertion Failed - API server is NOT healthy"
+        success_msg: "Assertion Passed - API server is healthy"
+
+- name: Run k8s cluster verifications from Master and Worker nodes
+  hosts: master, workers
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure kubelet is running
+      ansible.builtin.systemd_service:
+        name: kubelet
+        state: started
+        enabled: true
+      register: kubelet_status
+
+    - name: Assert - kubelet is running
+      ansible.builtin.assert:
+        that:
+          - "kubelet_status.state == 'started'"
+        fail_msg: "Assertion Failed - kubelet is NOT running"
+        success_msg: "Assertion PASSED - kubelet is running"
+
+- name: Run k8s cluster verifications from Master node
+  hosts: master
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure kube-apiserver is running
+      ansible.builtin.command: pgrep -f kube-apiserver
+      register: apiserver_proc
+      failed_when: apiserver_proc.rc != 0
+      changed_when: false
+
+    - name: Assert - kube-apiserver is running
+      ansible.builtin.assert:
+        that:
+          - "apiserver_proc.rc == 0"
+        fail_msg: "Assertion Failed - API server proc is NOT running"
+        success_msg: "Assertion PASSED - API server proc is running"
+
+    - name: Ensure kube-controller-manager is running
+      ansible.builtin.command: pgrep -f kube-controller-manager
+      register: controller_proc
+      failed_when: controller_proc.rc != 0
+      changed_when: false
+
+    - name: Assert - kube-controller-manager is running
+      ansible.builtin.assert:
+        that:
+          - "controller_proc.rc == 0"
+        fail_msg: "Assertion Failed - Controller manager proc is NOT running"
+        success_msg: "Assertion PASSED - Controller manager proc is running"
+
