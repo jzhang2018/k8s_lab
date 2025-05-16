@@ -5,7 +5,8 @@
   hosts: localhost  # ansible controller
   gather_facts: false
   become: true
-  tasks: 
+  tasks:
+    # --------- Check Kubernetes API server health via url --------- #
     - name: Check Kubernetes API server health via url
       ansible.builtin.uri:
         url: "https://{{ groups['master'][0] }}:6443/healthz"
@@ -62,6 +63,7 @@
   gather_facts: false
   become: true
   tasks:
+    # ----------- Ensure kube-apiserver is running ----------- #
     - name: Ensure kube-apiserver is running
       ansible.builtin.command: pgrep -f kube-apiserver
       register: apiserver_proc
@@ -75,6 +77,7 @@
         fail_msg: "Assertion Failed - API server proc is NOT running"
         success_msg: "Assertion PASSED - API server proc is running"
 
+    # ----------- Ensure kube-controller-manager is running ----------- #
     - name: Ensure kube-controller-manager is running
       ansible.builtin.command: pgrep -f kube-controller-manager
       register: controller_proc
@@ -88,22 +91,24 @@
         fail_msg: "Assertion Failed - Controller manager proc is NOT running"
         success_msg: "Assertion PASSED - Controller manager proc is running"
 
-    # ---------- Check if nodes are in 'Ready' state ---------- #
-    - name: Check if kubectl can get 'Ready' state from nodes
+    # ---------- Check if nodes are in 'Ready' state, including master and worker nodes ---------- #
+    ## TODO: check master and worker nodes against inventory
+    - name: Check if kubectl can get 'Ready' state from nodes, including master and worker nodes
       ansible.builtin.command: kubectl get nodes -o wide --no-headers
       register: kubectl_nodes
       environment:
         KUBECONFIG: /etc/kubernetes/admin.conf
       changed_when: false
 
-    # TODO - parse master and worker node via ip address
     - name: Assert - kubectl to get 'Ready' state from nodes
       ansible.builtin.assert:
         that:
+          - "'NotReady' not in kubectl_nodes.stdout"
           - "'Ready' in kubectl_nodes.stdout"
         fail_msg: "Assertion Failed - kubectl cannot get 'Ready' state from nodes"
         success_msg: "Assertion PASSED - kubectl can get 'Ready' state from nodes"
 
+    # ---------- Check if kubectl can Get component statuses ---------- #
     - name: Check if kubectl can Get component statuses
       ansible.builtin.command: kubectl get componentstatuses
       register: component_statuses
@@ -123,6 +128,7 @@
       vars:
         item_status: "{{ item }}"
 
+     # ---------- Check if kubeconfig exists (kubeadm Init Status) ---------- #
     - name: Check if kubeconfig exists (kubeadm Init Status)
       ansible.builtin.stat:
         path: /etc/kubernetes/admin.conf
