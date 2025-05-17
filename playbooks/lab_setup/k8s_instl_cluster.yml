@@ -33,6 +33,12 @@
         group: "{{ k8s_user }}"
         mode: '0600'
 
+    - name: Fetch kube config from master node to Ansible controller for Ansible k8s work
+      ansible.builtin.fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: "/home/{{ ansible_user }}/.kube/config"
+        flat: true
+
     # K8s provides a join command that includes a token and the master node’s IP address to
     # allow worker nodes to connect to the cluster
     - name: Save join command on master node
