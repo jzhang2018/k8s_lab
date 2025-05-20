@@ -1,0 +1,142 @@
+---
+
+ ## ---------------------- Ansible Controller ---------------------- ##
+- name: Run k8s cluster verifications from Ansible controller
+  hosts: localhost  # ansible controller
+  gather_facts: false
+  become: true
+  tasks:
+    # --------- Check Kubernetes API server health via url --------- #
+    - name: Check Kubernetes API server health via url
+      ansible.builtin.uri:
+        url: "https://{{ groups['master'][0] }}:6443/healthz"
+        method: GET
+        validate_certs: false
+        status_code: 200
+      register: api_health
+      ignore_errors: true
+
+    - name: Assert - API server is healthy
+      ansible.builtin.assert:
+        that:
+          - "api_health.status == 200"
+        fail_msg: "Assertion Failed - API server is NOT healthy"
+        success_msg: "Assertion Passed - API server is healthy"
+
+## ---------------------- Master and Worker Nodes ---------------------- ##
+- name: Run k8s cluster verifications from Master and Worker nodes
+  hosts: master, workers
+  gather_facts: false
+  become: true
+  tasks:
+    # --------- Check if kubelet is running --------- #
+    - name: Ensure kubelet is running
+      ansible.builtin.systemd_service:
+        name: kubelet
+        state: started
+        enabled: true
+      register: kubelet_status
+
+    - name: Assert - kubelet is running
+      ansible.builtin.assert:
+        that:
+          - "kubelet_status.state == 'started'"
+        fail_msg: "Assertion Failed - kubelet is NOT running"
+        success_msg: "Assertion PASSED - kubelet is running"
+
+    # ---------- Check if CNI config exists ---------- #
+    - name: Check if CNI config exists
+      ansible.builtin.stat:
+        path: /etc/cni/net.d
+      register: cni_config
+
+    - name: Assert - CNI config exists
+      ansible.builtin.assert:
+        that:
+          - "cni_config.stat.exists"
+        fail_msg: "Assertion Failed - CNI configuration directory /etc/cni/net.d does not exist"
+        success_msg: "Assertion PASSED - CNI configuration directory /etc/cni/net.d exists"
+
+## ------------------------- Master Node ------------------------- ##
+- name: Run k8s cluster verifications from Master node
+  hosts: master
+  gather_facts: false
+  become: true
+  tasks:
+    # ----------- Ensure kube-apiserver is running ----------- #
+    - name: Ensure kube-apiserver is running
+      ansible.builtin.command: pgrep -f kube-apiserver
+      register: apiserver_proc
+      failed_when: apiserver_proc.rc != 0
+      changed_when: false
+
+    - name: Assert - kube-apiserver is running
+      ansible.builtin.assert:
+        that:
+          - "apiserver_proc.rc == 0"
+        fail_msg: "Assertion Failed - API server proc is NOT running"
+        success_msg: "Assertion PASSED - API server proc is running"
+
+    # ----------- Ensure kube-controller-manager is running ----------- #
+    - name: Ensure kube-controller-manager is running
+      ansible.builtin.command: pgrep -f kube-controller-manager
+      register: controller_proc
+      failed_when: controller_proc.rc != 0
+      changed_when: false
+
+    - name: Assert - kube-controller-manager is running
+      ansible.builtin.assert:
+        that:
+          - "controller_proc.rc == 0"
+        fail_msg: "Assertion Failed - Controller manager proc is NOT running"
+        success_msg: "Assertion PASSED - Controller manager proc is running"
+
+    # ---------- Check if nodes are in 'Ready' state, including master and worker nodes ---------- #
+    ## TODO: check master and worker nodes against inventory
+    - name: Check if kubectl can get 'Ready' state from nodes, including master and worker nodes
+      ansible.builtin.command: kubectl get nodes -o wide --no-headers
+      register: kubectl_nodes
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
+    - name: Assert - kubectl to get 'Ready' state from nodes
+      ansible.builtin.assert:
+        that:
+          - "'NotReady' not in kubectl_nodes.stdout"
+          - "'Ready' in kubectl_nodes.stdout"
+        fail_msg: "Assertion Failed - kubectl cannot get 'Ready' state from nodes"
+        success_msg: "Assertion PASSED - kubectl can get 'Ready' state from nodes"
+
+    # ---------- Check if kubectl can Get component statuses ---------- #
+    - name: Check if kubectl can Get component statuses
+      ansible.builtin.command: kubectl get componentstatuses
+      register: component_statuses
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
+    - name: Assert - k8s component is healthy
+      ansible.builtin.assert:
+        that:
+          - item_status.split()[1] == "Healthy"
+        fail_msg: "Assertion Failed - component is not healthy: {{ item_status }}"
+        success_msg: "Assertion PASSED - component is healthy"
+      loop: "{{ component_statuses.stdout_lines[1:] }}"
+      loop_control:
+        label: "{{ item_status }}"
+      vars:
+        item_status: "{{ item }}"
+
+     # ---------- Check if kubeconfig exists (kubeadm Init Status) ---------- #
+    - name: Check if kubeconfig exists (kubeadm Init Status)
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubeconfig
+
+    - name: Assert - Admin kubeconfig exists
+      ansible.builtin.assert:
+        that:
+          - "kubeconfig.stat.exists"
+        fail_msg: "Assertion Failed - Admin kubeconfig /etc/kubernetes/admin.conf does not exist"
+        success_msg: "Assertion PASSED - Admin kubeconfig /etc/kubernetes/admin.conf exists"

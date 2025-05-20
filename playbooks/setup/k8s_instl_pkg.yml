@@ -1,0 +1,31 @@
+---
+
+- name: Setup Kubernetes repository and install packages
+  hosts: master, workers
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Add Kubernetes YUM repository
+      ansible.builtin.yum_repository:
+        name: kubernetes
+        description: Kubernetes Repository
+        baseurl: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/rpm/"
+        enabled: true
+        gpgcheck: true
+        gpgkey: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/rpm/repodata/repomd.xml.key"
+        repo_gpgcheck: true
+        module_hotfixes: true
+
+    - name: Install Kubernetes packages
+      ansible.builtin.yum:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+
+    - name: Enable and start kubelet
+      ansible.builtin.service:
+        name: kubelet
+        enabled: true
+        state: started

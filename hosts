@@ -1,0 +1,21 @@
+[master]
+192.168.184.135
+
+[workers]
+192.168.184.134
+
+[all:vars]
+ansible_user=iacuser
+k8s_user=iacuser
+
+# k8s version
+k8s_version='1.28'
+
+# as of 5/14/25, the latest version is 1.28 from https://download.opensuse.org
+crio_version='1.28'
+
+# openSUSE Kubic project does not provide repo for RHEL 9 stream, we use CentOS 9 Stream
+os_stream=CentOS_9_Stream
+
+# Calico version
+calico_version='3.30.0'
