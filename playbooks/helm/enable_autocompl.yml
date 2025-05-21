@@ -1,0 +1,40 @@
+---
+
+- name: Enable Helm bash auto-completion on RHEL 9
+  hosts: localhost  # ansible controller
+  connection: local
+  gather_facts: false
+  become: yes
+  tasks:
+
+    - name: Ensure bash-completion is installed
+      ansible.builtin.dnf:
+        name: bash-completion
+        state: present
+
+    - name: Create bash completion directory if it doesn't exist
+      ansible.builtin.file:
+        path: /etc/bash_completion.d
+        state: directory
+        mode: '0755'
+
+    - name: Generate Helm bash completion script
+      ansible.builtin.command: helm completion bash
+      register: helm_completion
+
+    - name: Print out
+      ansible.builtin.debug:
+        msg: "{{ helm_completion.stdout }}"
+
+    - name: Write Helm completion to file
+      ansible.builtin.copy:
+        dest: /etc/bash_completion.d/helm
+        content: "{{ helm_completion.stdout }}"
+        mode: '0644'
+
+    - name: Ensure the script will be loaded in interactive shells
+      ansible.builtin.lineinfile:
+        path: /etc/bashrc
+        regexp: 'source /etc/bash_completion.d/helm'
+        line: 'source /etc/bash_completion.d/helm'
+        state: present
