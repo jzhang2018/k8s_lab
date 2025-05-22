@@ -4,23 +4,31 @@
   hosts: localhost
   connection: local
   gather_facts: no
+  no_log: true
   vars:
     test_namespace: 'my-test-namespace'
   tasks:
     - name: Install nginx with Helm
       kubernetes.core.helm:
-        name: my-nginx
+        name: my-nginx-nodeport
         chart_ref: bitnami/nginx
         release_namespace: "{{ test_namespace }}"
         create_namespace: true
-        timeout: 10m
+        values:
+          service:
+            type: NodePort
+            nodePorts:
+              http: 30080
+              https: 30443
+        timeout: 600s
         kubeconfig: "{{ kubeconfig_path }}"
+        update_repo_cache: true
         wait: true
-      register: test_out
+      register: deploy_status
     
-    - name: Print out chart install and create_namespace
+    - name: Print out chart deployment status
       ansible.builtin.debug:
-        msg: "{{ test_out }}"
+        msg: "{{ deploy_status.status }}"
 
     - name: List Helm releases
       ansible.builtin.command: helm list --all-namespaces
@@ -37,8 +45,12 @@
         namespace: "{{ test_namespace }}"
         kubeconfig: "{{ kubeconfig_path }}"
       register: nginx_pods
+      no_log: false
 
     - name: Display pod names and status
       ansible.builtin.debug:
         msg: "{{ item.metadata.name }} - {{ item.status.phase }}"
       loop: "{{ nginx_pods.resources }}"
+      no_log: false
+
+

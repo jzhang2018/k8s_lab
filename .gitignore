@@ -2,3 +2,4 @@ k8s-join-command/*
 .git/*
 test.yml
 .ansible
+out*
