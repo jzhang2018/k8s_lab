@@ -1,0 +1,44 @@
+---
+
+- name: Install NGINX via Helm using kubernetes.core.helm
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    test_namespace: 'my-test-namespace'
+  tasks:
+    - name: Install nginx with Helm
+      kubernetes.core.helm:
+        name: my-nginx
+        chart_ref: bitnami/nginx
+        release_namespace: "{{ test_namespace }}"
+        create_namespace: true
+        timeout: 10m
+        kubeconfig: "{{ kubeconfig_path }}"
+        wait: true
+      register: test_out
+    
+    - name: Print out chart install and create_namespace
+      ansible.builtin.debug:
+        msg: "{{ test_out }}"
+
+    - name: List Helm releases
+      ansible.builtin.command: helm list --all-namespaces
+      register: helm_list_output
+
+    - name: Show Helm release list
+      ansible.builtin.debug:
+        msg: "{{ helm_list_output.stdout_lines }}"
+
+    - name: Get pod info in the namespace
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ test_namespace }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+      register: nginx_pods
+
+    - name: Display pod names and status
+      ansible.builtin.debug:
+        msg: "{{ item.metadata.name }} - {{ item.status.phase }}"
+      loop: "{{ nginx_pods.resources }}"

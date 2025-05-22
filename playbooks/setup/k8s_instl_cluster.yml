@@ -33,7 +33,7 @@
         group: "{{ k8s_user }}"
         mode: '0600'
 
-    - name: Fetch kube config from master node to Ansible controller for Ansible k8s work
+    - name: Fetch kube config from master node to Ansible controller for Ansible k8s work (K8s core and helm)
       ansible.builtin.fetch:
         src: /etc/kubernetes/admin.conf
         dest: "/home/{{ ansible_user }}/.kube/config"
