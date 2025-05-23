@@ -22,10 +22,6 @@
       ansible.builtin.command: helm completion bash
       register: helm_completion
 
-    - name: Print out
-      ansible.builtin.debug:
-        msg: "{{ helm_completion.stdout }}"
-
     - name: Write Helm completion to file
       ansible.builtin.copy:
         dest: /etc/bash_completion.d/helm

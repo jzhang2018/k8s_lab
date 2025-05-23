@@ -4,7 +4,6 @@
   hosts: localhost
   connection: local
   gather_facts: no
-  no_log: true
   vars:
     test_namespace: 'my-test-namespace'
   tasks:
@@ -30,25 +29,4 @@
       ansible.builtin.debug:
         msg: "{{ deploy_status.status }}"
 
-    - name: List Helm releases
-      ansible.builtin.command: helm list --all-namespaces
-      register: helm_list_output
 
-    - name: Show Helm release list
-      ansible.builtin.debug:
-        msg: "{{ helm_list_output.stdout_lines }}"
-
-    - name: Get pod info in the namespace
-      kubernetes.core.k8s_info:
-        api_version: v1
-        kind: Pod
-        namespace: "{{ test_namespace }}"
-        kubeconfig: "{{ kubeconfig_path }}"
-      register: nginx_pods
-      no_log: false
-
-    - name: Display pod names and status
-      ansible.builtin.debug:
-        msg: "{{ item.metadata.name }} - {{ item.status.phase }}"
-      loop: "{{ nginx_pods.resources }}"
-      no_log: false

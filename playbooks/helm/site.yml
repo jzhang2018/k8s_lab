@@ -11,3 +11,6 @@
 
 - name: Run a test chart deployment
   ansible.builtin.import_playbook: test_helm.yml
+
+- name: Post deployment check
+  ansible.builtin.import_playbook: ../deploy/post_deploy.yml
