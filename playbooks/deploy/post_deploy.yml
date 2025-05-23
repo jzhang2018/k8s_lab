@@ -1,18 +1,71 @@
 - name: Post Deploy Checkings
-  hosts: master
+  hosts: localhost
+  connection: local
   gather_facts: no
 
   tasks:
-    # ++++++++++++++++++++++++ check Pod ++++++++++++++++++++++++ #
-    - name: Get pod info in the namespace
+    - name: Get k8s deplyments, pods and services info by release name and namespace
       kubernetes.core.k8s_info:
-        api_version: v1
-        kind: Pod
+        kind: "{{ item }}"
         namespace: "{{ k8s_namespace }}"
-        kubeconfig: "{{ kubeconfig_path }}"
-      register: pods_info
+        label_selectors:
+          - "app.kubernetes.io/instance={{ release_name }}"
+      register: k8s_outputs
+      loop:
+        - deployment
+        - pod
+        - service
       
-    - name: Display pod names and status
+    # - name: Debug print out all
+    #   debug:
+    #     msg: "{{ k8s_outputs }}"  
+  
+    - name: Build dictionary of outputs by kind
+      set_fact:
+        k8s_outputs_dict: >-
+          {{
+            (k8s_outputs_dict | default({})) |
+            combine({ item.item: item.resources })
+          }}
+      loop: "{{ k8s_outputs.results }}"
+      no_log: true
+    
+    - name: Show summarized pod info
       ansible.builtin.debug:
-        msg: "{{ item.metadata.name }} - {{ item.status.phase }}"
-      loop: "{{ pods_info.resources }}"
+        msg: >-
+          Pod Name: {{ item.metadata.name }},
+          Phase: {{ item.status.phase }},
+          Restarts: {{
+            item.status.containerStatuses | map(attribute='restartCount') | sum
+          }},
+          Start Time: {{ item.status.startTime }},
+          Node: {{ item.spec.nodeName }},
+          Containers: {{ item.spec.containers | map(attribute='name') | list }}
+      loop: "{{ k8s_outputs_dict['pod'] }}"
+      loop_control: # use loop_control to suppress full item dump
+        label: "{{ item.metadata.name }}"
+          
+    - name: Show summarized service info
+      ansible.builtin.debug:
+        # msg: "{{ k8s_outputs_dict['service'] }}"
+        msg: >-
+          Service Name: {{ item.metadata.name }},
+          Type: {{ item.spec.type }},
+          ClusterIP: {{ item.spec.clusterIP }},
+          Ports: {{ item.spec.ports }},
+          LoadBalancer: {{ item.status.loadBalancer }}
+      loop: "{{ k8s_outputs_dict['service'] }}"
+      loop_control: # use loop_control to suppress full item dump
+        label: "{{ item.metadata.name }}"
+
+    # - name: Display Deployment Status Summary
+    #   ansible.builtin.debug:
+    #     msg:
+    #       deployment/release name: "{{ deployments.resources[0].metadata.name }}"
+    #       namespace: "{{ deployments.resources[0].metadata.namespace }}"
+    #       desired_replicas: "{{ deployments.resources[0].spec.replicas }}"
+    #       ready_replicas: "{{ deployments.resources[0].status.readyReplicas | default(0) }}"
+    #       updated_replicas: "{{ deployments.resources[0].status.updatedReplicas | default(0) }}"
+    #       available_replicas: "{{ deployments.resources[0].status.availableReplicas | default(0) }}"
+    #       conditions: "{{ deployments.resources[0].status.conditions }}"
+

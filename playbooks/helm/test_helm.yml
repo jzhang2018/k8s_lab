@@ -52,5 +52,3 @@
         msg: "{{ item.metadata.name }} - {{ item.status.phase }}"
       loop: "{{ nginx_pods.resources }}"
       no_log: false
-
-
