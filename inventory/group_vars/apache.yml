@@ -1,0 +1,16 @@
+---
+
+k8s_namespace: 'k8s-lab'
+release_name: "my-apache-nodeport"
+
+# apache chart variables
+helm_chart_ref: 'bitnami/apache'
+helm_chart_version: '11.3.9'
+
+# apache release valuse (dict)
+values:
+   service:
+      type: NodePort
+      nodePorts:
+        http: 31080
+        https: 31443

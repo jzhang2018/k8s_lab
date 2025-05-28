@@ -4,3 +4,4 @@ test.yml
 .ansible
 out*
 .vscode
+tmp/*
