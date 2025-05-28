@@ -28,5 +28,3 @@
     - name: Print out chart deployment status
       ansible.builtin.debug:
         msg: "{{ deploy_status.status }}"
-
-

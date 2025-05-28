@@ -3,3 +3,4 @@ k8s-join-command/*
 test.yml
 .ansible
 out*
+.vscode

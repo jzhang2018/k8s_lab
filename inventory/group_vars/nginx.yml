@@ -1,0 +1,16 @@
+---
+
+k8s_namespace: 'k8s-lab'
+release_name: "my-nginx-nodeport"
+
+# nginx chart variables
+helm_chart_ref: 'bitnami/nginx'
+helm_chart_version: 
+
+# nginx release valuse (dict)
+values:
+   service:
+      type: NodePort
+      nodePorts:
+        http: 30080
+        https: 30443
