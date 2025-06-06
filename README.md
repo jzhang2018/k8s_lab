@@ -23,3 +23,6 @@ ansible-playbook -i inventory/hosts.yml playbooks/helm/test_helm.yml  </br>
 Helm Deployment Playbooks: </br>
 ansible-playbook -i inventory/hosts.yml -l nginx_host playbooks/deploy/create_nginx.yml </br>
 ansible-playbook -i inventory/hosts.yml -l apache_host playbooks/deploy/create_apache.yml </br>
+
+Install k8s Monitoring Stack
+ansible-playbook -i inventory/hosts.yml -l mon_stack_host playbooks/mon/instl_mon_stack.yml </br>

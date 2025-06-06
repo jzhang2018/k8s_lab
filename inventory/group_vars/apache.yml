@@ -7,10 +7,14 @@ release_name: "my-apache-nodeport"
 helm_chart_ref: 'bitnami/apache'
 helm_chart_version: '11.3.9'
 
-# apache release valuse (dict)
+# apache release values (dict)
 values:
    service:
       type: NodePort
       nodePorts:
         http: 31080
         https: 31443
+      annotations:
+         prometheus.io/scrape: "true"
+         prometheus.io/port: "8080"
+         prometheus.io/path: "/metrics"

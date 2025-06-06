@@ -1,72 +1,20 @@
 ---
 
+# ------------ Initialize cluster control plane on master ------------ #
 - name: Initialize k8s control plane on master node and install Pod network Calico
   hosts: master
   gather_facts: false
   become: true
-  tasks:
-    # ------------ Initialize cluster control plane on master ------------ #
-    - name: Initialize Kubernetes cluster
-      ansible.builtin.command: kubeadm init --pod-network-cidr=192.168.0.0/16
-      args:
-        creates: /etc/kubernetes/admin.conf
-      register: kubeadm_output
+  roles:
+    - roles/init_cluster
 
-    - name: Debug - print out kubeadm_output (check join command)
-      ansible.builtin.debug:
-        msg: "{{ kubeadm_output }}"
-
-    - name: Create .kube directory under k8s user
-      ansible.builtin.file:
-        path: "/home/{{ k8s_user }}/.kube"
-        state: directory
-        owner: "{{ k8s_user }}"
-        group: "{{ k8s_user }}"
-        mode: '0755'
-
-    - name: Copy kube config to k8s user's kube config
-      ansible.builtin.copy:
-        src: /etc/kubernetes/admin.conf
-        dest: "/home/{{ k8s_user }}/.kube/config"
-        remote_src: true # avoid to check source on local host (ansible controller)
-        owner: "{{ k8s_user }}"
-        group: "{{ k8s_user }}"
-        mode: '0600'
-
-    - name: Fetch kube config from master node to Ansible controller for Ansible k8s work (K8s core and helm)
-      ansible.builtin.fetch:
-        src: /etc/kubernetes/admin.conf
-        dest: "/home/{{ ansible_user }}/.kube/config"
-        flat: true
-
-    # K8s provides a join command that includes a token and the master node’s IP address to
-    # allow worker nodes to connect to the cluster
-    - name: Save join command on master node
-      ansible.builtin.shell: |
-        kubeadm token create --print-join-command > /tmp/kubeadm_join.sh
-      when: "'/tmp/kubeadm_join.sh' not in kubeadm_output.stdout"
-      changed_when: false
-
-    - name: Fetch join command to Ansible controller from master node for later use
-      ansible.builtin.fetch:
-        src: /tmp/kubeadm_join.sh
-        dest: /tmp/k8s-join-command/
-        flat: true
-
-    # ------------ Install Pod network Calico after cluster control plane is initialized ------------ #
-    - name: Apply Calico CNI
-      ansible.builtin.shell: >
-        kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v"{{ calico_version }}"/manifests/calico.yaml
-      environment:
-        KUBECONFIG: /etc/kubernetes/admin.conf  # for ansible_user to run kubectl command
-      changed_when: false
-
+# ----------------------- Join worker nodes to master --------------------- # 
 - name: Join worker nodes
   hosts: workers
   gather_facts: false
   become: true
   tasks:
-    - name: Copy join script from Ansible controller
+    - name: Copy join script from Ansible controller to worker nodes
       ansible.builtin.copy:
         src: /tmp/k8s-join-command/kubeadm_join.sh
         dest: /tmp/kubeadm_join.sh
@@ -77,3 +25,21 @@
       args:
         creates: /etc/kubernetes/kubelet.conf
       changed_when: false
+
+# -------------------------------- Configure kubelet DNS on all nodes ------------------------------ # 
+- name: Configure kubelet DNS on all nodes
+  hosts: master, workers
+  gather_facts: false
+  become: true
+  roles:
+    - roles/kubelet_dns
+  
+# ----------------------- Install Calico CNI, apply COreDNS patch on master node --------------------- #
+- name: Install Calico CNI, apply COreDNS patch on master node
+  hosts: master
+  gather_facts: false
+  become: true
+  roles:
+    - roles/instl_calico
+    - roles/patch_coredns
+

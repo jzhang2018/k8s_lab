@@ -1,0 +1,61 @@
+---
+
+- name: Get CoreDNS ConfigMap
+  kubernetes.core.k8s_info:
+    kubeconfig: /etc/kubernetes/admin.conf
+    kind: ConfigMap
+    namespace: kube-system
+    name: coredns
+  register: coredns_config
+
+- name: Assert CoreDNS forwarders are correct
+  ansible.builtin.assert:
+    that:
+      - "'forward . 8.8.8.8 1.1.1.1' in coredns_config.resources[0].data.Corefile"
+    fail_msg: "Assertion Failed - CoreDNS does NOT have the correct forwarders configured"
+    success_msg: "Assertion Passed - CoreDNS forwarders ARE correctly configured"
+
+- name: Run DNS test pod
+  kubernetes.core.k8s:
+    kubeconfig: /etc/kubernetes/admin.conf
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: dns-tester
+        namespace: default
+      spec:
+        containers:
+        - name: dns
+          image: busybox:1.28
+          command: ["sh", "-c", "nslookup google.com || exit 1"]
+        restartPolicy: Never
+  register: dns_test_pod
+
+- name: Wait for dns-tester pod to complete
+  kubernetes.core.k8s_info:
+    kubeconfig: /etc/kubernetes/admin.conf
+    kind: Pod
+    namespace: default
+    name: dns-tester
+  register: dns_test_result
+  until: dns_test_result.resources[0].status.phase in ['Succeeded', 'Failed']
+  retries: 10
+  delay: 3
+
+- name: Assert DNS test succeeded
+  ansible.builtin.assert:
+    that:
+      - dns_test_result.resources[0].status.phase == 'Succeeded'
+    fail_msg: "Assertion Failed - DNS (google.com) resolution failed in test pod"
+    success_msg: "Assertion Passed - DNS (google.com) resolution succeeded in test pod"
+
+- name: Clean up dns-tester pod
+  kubernetes.core.k8s:
+    kubeconfig: /etc/kubernetes/admin.conf
+    kind: Pod
+    namespace: default
+    name: dns-tester
+    state: absent
+

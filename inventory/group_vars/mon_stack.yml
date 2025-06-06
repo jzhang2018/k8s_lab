@@ -1,0 +1,36 @@
+---
+
+k8s_namespace: 'k8s-monitoring'
+release_name: 'kube-prometheus-stack'
+
+# kube-prometheus-stack chart variables
+helm_chart_ref: 'prometheus-community/kube-prometheus-stack'
+helm_chart_version: '72.6.3'
+
+# kube-prometheus-stack release values (dict)
+values:
+  dnsConfig:
+  enabled: true
+  nameservers:
+    - 1.1.1.1
+  options:
+    - name: ndots
+      value: "2"
+  prometheusOperator:   
+    admissionWebhooks:
+      enabled: false
+      patch:
+        enabled: false
+  grafana:
+    adminPassword: "gadmin"   # TODO: vault    
+    service:
+      type: NodePort
+      nodePort: 30300
+  prometheus:
+    prometheusSpec:
+      serviceMonitorSelectorNilUsesHelmValues: false  # enable automatic discovery regardless labeling
+    service:
+      type: NodePort
+      nodePort: 30900
+
+

@@ -34,18 +34,40 @@
         success_msg: "Assertion Passed - SELinux is set to Permissive"
 
     # --------------- Verify if firewall ports are enabled --------------- #
-    - name: Get firewalld active ports
-      ansible.builtin.command: firewall-cmd --list-ports
-      register: fw_ports
-      changed_when: false
+    # - name: Get firewalld active ports
+    #   ansible.builtin.command: firewall-cmd --list-ports
+    #   register: fw_ports
+    #   changed_when: false
 
-    - name: Assert required ports are open on all nodes
+    # - name: Assert required ports are open on all nodes
+    #   ansible.builtin.assert:
+    #     that:
+    #       - "'10250/tcp' in fw_ports.stdout"
+    #       - "'30000-32767/tcp' in fw_ports.stdout"
+    #       - "'5473/tcp' in fw_ports.stdout"
+    #     fail_msg: "Assertion Failed - One or more required Kubernetes ports are not open in firewalld"
+    #     success_msg: "Assertion Passed - All required Kubernetes ports are open"
+
+    # --------------- Verify if firewall is stopped, disabled and masked --------------- #
+    - name: Gather firewalld service facts
+      ansible.builtin.systemd:
+        name: firewalld
+      register: firewalld_status
+
+    - name: Extract firewalld service info
+      ansible.builtin.set_fact:
+          fw_masked: "{{ firewalld_status.status.UnitFileState == 'masked' or firewalld_status.status.LoadState == 'masked' }}"
+          fw_active_state: "{{ firewalld_status.status.ActiveState }}"
+          fw_sub_state: "{{ firewalld_status.status.SubState }}"
+
+    - name: Assert firewalld is disabled and masked
       ansible.builtin.assert:
         that:
-          - "'10250/tcp' in fw_ports.stdout"
-          - "'30000-32767/tcp' in fw_ports.stdout"
-        fail_msg: "Assertion Failed - One or more required Kubernetes ports are not open in firewalld"
-        success_msg: "Assertion Passed - All required Kubernetes ports are open"
+          - fw_masked
+          - "'inactive' in fw_active_state"
+          - "'dead' in fw_sub_state"
+        fail_msg: "Assertion Failed - firewalld is NOT inactive/dead NOR masked"
+        success_msg: "Assertion Passed - firewalld is disabled/dead and masked"
 
     # --------------- Verify if kernel modules are loaded --------------- #
     - name: Get list of loaded kernel modules
@@ -157,21 +179,21 @@
         success_msg: "Assertion Passed - kubectl is installed"
 
 ## ---------------------- Master Node ---------------------- ##
-- name: System verification for k8s set-up on Master nodes
-  hosts: master
-  gather_facts: false
-  become: true
-  tasks:
-    # --------------- Verify if firewall ports are enabled --------------- #
-    - name: Get firewalld active ports
-      ansible.builtin.command: firewall-cmd --list-ports
-      register: master_fw_ports
-      changed_when: false
+# - name: System verification for k8s set-up on Master nodes
+#   hosts: master
+#   gather_facts: false
+#   become: true
+#   tasks:
+#     # --------------- Verify if firewall ports are enabled --------------- #
+#     - name: Get firewalld active ports
+#       ansible.builtin.command: firewall-cmd --list-ports
+#       register: master_fw_ports
+#       changed_when: false
 
-    - name: Assert required ports are open on all nodes
-      ansible.builtin.assert:
-        that:
-          - "'6443/tcp' in master_fw_ports.stdout"
-          - "'2379-2380/tcp' in master_fw_ports.stdout"
-        fail_msg: "Assertion Failed - One or more required Kubernetes ports are not open in firewalld on master node"
-        success_msg: "Assertion Passed - All required Kubernetes ports are open on master node"
+#     - name: Assert required ports are open on Master nodes
+#       ansible.builtin.assert:
+#         that:
+#           - "'6443/tcp' in master_fw_ports.stdout"
+#           - "'2379-2380/tcp' in master_fw_ports.stdout"
+#         fail_msg: "Assertion Failed - One or more required Kubernetes ports are not open in firewalld on master node"
+#         success_msg: "Assertion Passed - All required Kubernetes ports are open on master node"

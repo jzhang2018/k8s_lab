@@ -5,12 +5,25 @@ release_name: "my-nginx-nodeport"
 
 # nginx chart variables
 helm_chart_ref: 'bitnami/nginx'
-helm_chart_version: 
+helm_chart_version: '20.0.3'
 
-# nginx release valuse (dict)
+# nginx release values (dict)
 values:
    service:
       type: NodePort
       nodePorts:
         http: 30080
         https: 30443
+      annotations:
+         prometheus.io/scrape: "true"
+         prometheus.io/port: "8080"
+         prometheus.io/path: "/metrics"
+
+   metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    image:
+      registry: docker.io
+      repository: 
+      tag: 0.11.0

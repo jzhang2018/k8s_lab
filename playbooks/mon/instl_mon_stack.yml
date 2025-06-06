@@ -1,0 +1,10 @@
+---
+- name: Deploy kube-prometheus-stack
+  hosts: mon_stack
+  connection: local
+  gather_facts: no
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}" 
+  
+  roles:
+    - ../../roles/helm_chart
