@@ -22,8 +22,8 @@ values:
    metrics:
     enabled: true
     serviceMonitor:
-      enabled: true
+      enabled: false
     image:
       registry: docker.io
-      repository: 
+      repository: bitnami/nginx-exporter
       tag: 0.11.0
