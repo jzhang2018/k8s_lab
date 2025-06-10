@@ -23,7 +23,7 @@ values:
     admissionWebhooks:
       enabled: true
       patch:
-        enabled: false
+        enabled: true
     podDnsConfig:
       enabled: true
       nameservers:
