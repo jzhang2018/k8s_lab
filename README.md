@@ -25,4 +25,4 @@ ansible-playbook -i inventory/hosts.yml -l nginx_host playbooks/deploy/create_ng
 ansible-playbook -i inventory/hosts.yml -l apache_host playbooks/deploy/create_apache.yml </br>
 
 Install k8s Monitoring Stack
-ansible-playbook -i inventory/hosts.yml -l mon_stack_host playbooks/mon/instl_mon_stack.yml </br>
+ansible-playbook -i inventory/hosts.yml -l mon_stack_host playbooks/mon/instl_mon_stack.yml --ask-vault-pass </br>
