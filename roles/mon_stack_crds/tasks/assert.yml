@@ -1,0 +1,21 @@
+---
+
+- name: Get installed CRDs for API group 'monitoring.coreos.com'
+  connection: ssh
+  ansible.builtin.shell: "kubectl get crds | grep 'monitoring.coreos.com' | awk '{print $1}'"
+  register: crd_list
+  changed_when: false
+  failed_when: crd_list.rc != 0
+  delegate_to: "{{ groups['master'][0] }}"  # execute on master node
+
+- name: Debug - print out CRDs in monitoring stack group
+  ansible.builtin.debug:
+    msg: "{{ crd_list }}"
+  when: debug_mode | default(false)
+
+- name: Assert all required CRDs are installed
+  assert:
+    that:
+      - mon_stack_crds | difference(crd_list.stdout_lines) | length == 0
+    fail_msg: "Assertion Failed - One or more required monitoring.coreos.com CRDs are missing."
+    success_msg: "Assertion Passed - All required monitoring.coreos.com CRDs are installed."

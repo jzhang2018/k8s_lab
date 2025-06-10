@@ -1,0 +1,8 @@
+---
+# tasks file for mon_stack_crds
+
+- name: Install kube-prometheus-stack CRDs
+  ansible.builtin.include_tasks: instl_crds.yml
+
+- name: Assertion test
+  ansible.builtin.include_tasks: assert.yml

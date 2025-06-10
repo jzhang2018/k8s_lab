@@ -7,4 +7,5 @@
     KUBECONFIG: "{{ kubeconfig_path }}" 
   
   roles:
+    - ../../roles/mon_stack_crds
     - ../../roles/helm_chart
