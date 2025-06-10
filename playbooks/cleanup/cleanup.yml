@@ -1,0 +1,81 @@
+---
+
+- name: Cleanup failed Helm deployment
+  hosts: cleanup
+  connection: local
+  gather_facts: false
+  tasks:
+    # No idempotency so special handling to avoid error out
+    - name: Uninstall Helm release
+      shell: "helm uninstall {{ rn }} -n {{ ns }}"
+      register: helm_uninstall
+      failed_when: false
+      changed_when: "'Release not loaded' not in helm_uninstall.stderr"
+
+    - name: Delete all K8s resources in the namespace
+      ansible.builtin.shell: |
+        kubectl delete all --all -n {{ ns }}
+      delegate_to: "{{ groups['master'][0] }}" 
+      connection: ssh
+      ignore_errors: true
+
+    - name: Delete all PVCs in the namespace
+      ansible.builtin.shell: |
+        kubectl delete pvc --all -n {{ ns }}
+      delegate_to: "{{ groups['master'][0] }}" 
+      connection: ssh
+      ignore_errors: true
+
+    - name: Delete all ConfigMaps in the namespace
+      ansible.builtin.shell: |
+        kubectl delete configmap --all -n {{ ns }}
+      delegate_to: "{{ groups['master'][0] }}" 
+      connection: ssh
+      ignore_errors: true
+
+    - name: Delete all Secrets in the namespace
+      ansible.builtin.shell: |
+        kubectl delete secret --all -n {{ ns }}
+      delegate_to: "{{ groups['master'][0] }}"
+      connection: ssh
+      ignore_errors: false
+      changed_when: "'Release not loaded' not in helm_uninstall.stderr"
+
+    # No idempotency so special handling to avoid error out
+    - name: Delete namespace
+      ansible.builtin.shell: |
+        kubectl delete namespace {{ ns }}
+      delegate_to: "{{ groups['master'][0] }}" 
+      connection: ssh
+      register: delete_ns
+      failed_when: false
+      changed_when: "'NotFound' not in delete_ns.stderr"
+
+    - name: Wait for namespace to terminate
+      ansible.builtin.shell: |
+        while kubectl get namespace {{ ns }} &> /dev/null; do sleep 2; done
+      retries: 30
+      delay: 2
+      register: wait_result
+      until: wait_result.rc == 0
+      delegate_to: "{{ groups['master'][0] }}" 
+      connection: ssh
+      ignore_errors: true
+
+    - name: Delete specific CRDs from inventory list
+      ansible.builtin.shell: "kubectl delete crd {{ item }}"
+      loop: "{{ crds }}"
+      register: delete_crd
+      failed_when: false
+      changed_when: false
+      delegate_to: "{{ groups['master'][0] }}"
+      connection: ssh
+      loop_control:
+        label: "{{ item }}"
+
+    # - name: Mark CRD delete as changed if not NotFound
+    #   ansible.builtin.debug:
+    #     msg: "CRD '{{ item.item }}' deleted or attempted"
+    #   loop: "{{ delete_crd.results }}"
+    #   when: "'NotFound' not in item.stderr"
+    #   changed_when: true

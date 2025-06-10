@@ -7,7 +7,7 @@ release_name: 'kube-prometheus-stack'
 helm_chart_ref: 'prometheus-community/kube-prometheus-stack'
 helm_chart_version: '72.6.3'
 helm_chart_timeout: 45m
-mon_stack_crds: # required CRDs
+required_crds:
   - alertmanagers.monitoring.coreos.com
   - alertmanagerconfigs.monitoring.coreos.com
   - podmonitors.monitoring.coreos.com

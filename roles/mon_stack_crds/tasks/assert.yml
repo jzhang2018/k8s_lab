@@ -16,6 +16,6 @@
 - name: Assert all required CRDs are installed
   assert:
     that:
-      - mon_stack_crds | difference(crd_list.stdout_lines) | length == 0
+      - required_crds | difference(crd_list.stdout_lines) | length == 0
     fail_msg: "Assertion Failed - One or more required monitoring.coreos.com CRDs are missing."
     success_msg: "Assertion Passed - All required monitoring.coreos.com CRDs are installed."

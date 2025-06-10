@@ -24,5 +24,12 @@ Helm Deployment Playbooks: </br>
 ansible-playbook -i inventory/hosts.yml -l nginx_host playbooks/deploy/create_nginx.yml </br>
 ansible-playbook -i inventory/hosts.yml -l apache_host playbooks/deploy/create_apache.yml </br>
 
+Cleanup Deployment
+ansible-playbook -i inventory/hosts.yml -l cleanup_host playbooks/cleanup/cleanup.yml -e "{rn: my_rn, ns: my_ns, crds: [crd1, crd2, ...]" </br>
+i.e.: </br> 
+
+ansible-playbook -i inventory/hosts.yml -l cleanup_host playbooks/cleanup/cleanup.yml \
+-e "{\"rn\": \"kube-prometheus-stack\", \"ns\": \"k8s-monitoring\", \"crds\": [\"alertmanagers.monitoring.coreos.com\", \"podmonitors.monitoring.coreos.com\", \"prometheuses.monitoring.coreos.com\", \"prometheusrules.monitoring.coreos.com\", \"servicemonitors.monitoring.coreos.com\", \"thanosrulers.monitoring.coreos.com\"]}" </br>
+
 Install k8s Monitoring Stack
 ansible-playbook -i inventory/hosts.yml -l mon_stack_host playbooks/mon/instl_mon_stack.yml --ask-vault-pass </br>
