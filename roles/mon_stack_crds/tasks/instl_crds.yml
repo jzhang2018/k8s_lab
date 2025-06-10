@@ -1,0 +1,50 @@
+---
+
+# Sometimes Kubernetes API server is unable to reach the mutating admission webhook for 
+# prometheusrulemutate.monitoring.coreos.com, which is part of the kube-prometheus-stack. 
+# This typically happens when the Prometheus Operator is not yet running and ready when Helm 
+# tries to install the CRDs or custom resources like PrometheusRule. So install CRDs separately
+# as the pre-task for kube-prometheus-stack full installlation.
+
+- name: Remove existing kube-prometheus-stack chart directory (if any)
+  ansible.builtin.file:
+    path: /tmp/kube-prometheus-stack
+    state: absent
+  run_once: true
+
+- name: Download kube-prometheus-stack chart on ansible controller
+  ansible.builtin.command:
+    cmd: "helm pull prometheus-community/kube-prometheus-stack --version {{ helm_chart_version }} --untar"
+    chdir: /tmp
+  run_once: true
+
+- name: Copy CRDs to master node
+  connection: ssh
+  ansible.builtin.copy:
+    src: "/tmp/kube-prometheus-stack/charts/crds/crds/"   # on ansible controller
+    dest: "/tmp/kube-prometheus-stack-crds/"              # on master node
+    mode: "0644"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  delegate_to: "{{ groups['master'][0] }}"
+  with_fileglob:
+    - "/tmp/kube-prometheus-stack/charts/crds/crds/*.yaml"
+
+- name: Find CRD files on master
+  ansible.builtin.find:
+    paths: /tmp/kube-prometheus-stack-crds
+    patterns: "*.yaml"
+  register: crd_files
+  delegate_to: "{{ groups['master'][0] }}"
+  connection: ssh
+  run_once: true
+
+# Using 'kubectl replace --force' instead of 'kubectl apply' to avoid annotation size issues
+# Losing idempotency for this task
+- name: Replace CRDs forcefully using 'kubectl relace --force'
+  ansible.builtin.command: "kubectl replace --force -f {{ item.path }}"
+  loop: "{{ crd_files.files }}"
+  delegate_to: "{{ groups['master'][0] }}"
+  connection: ssh
+  no_log: true
+

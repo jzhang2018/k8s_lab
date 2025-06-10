@@ -1,0 +1,163 @@
+---
+
+k8s_namespace: 'k8s-monitoring'
+release_name: 'kube-prometheus-stack'
+
+# kube-prometheus-stack chart variables
+helm_chart_ref: 'prometheus-community/kube-prometheus-stack'
+helm_chart_version: '72.6.3'
+helm_chart_timeout: 45m
+mon_stack_crds: # required CRDs
+  - alertmanagers.monitoring.coreos.com
+  - alertmanagerconfigs.monitoring.coreos.com
+  - podmonitors.monitoring.coreos.com
+  - prometheuses.monitoring.coreos.com
+  - prometheusrules.monitoring.coreos.com
+  - servicemonitors.monitoring.coreos.com
+  - thanosrulers.monitoring.coreos.com
+
+# kube-prometheus-stack release values (dict)
+values:
+  prometheusOperator:   
+    namespaceOverride: k8s-monitoring
+    admissionWebhooks:
+      enabled: true
+      patch:
+        enabled: true
+    podDnsConfig:
+      enabled: true
+      nameservers:
+        - 1.1.1.1
+      options:
+        - name: ndots
+          value: "2"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi
+    tolerations:  # temp
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+  kubeStateMetrics:
+    namespaceOverride: k8s-monitoring
+    podDnsConfig:
+      enabled: true
+      nameservers:
+        - 1.1.1.1
+      options:
+        - name: ndots
+          value: "2"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi
+    tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+  grafana:
+    namespaceOverride: k8s-monitoring
+    adminPassword: "gadmin"   # TODO: vault    
+    service:
+      type: NodePort
+      nodePort: 30300
+    podDnsConfig:
+      enabled: true
+      nameservers:
+        - 1.1.1.1
+      options:
+        - name: ndots
+          value: "2"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi
+    persistence:
+      enabled: false
+    tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+  prometheus:
+    namespaceOverride: k8s-monitoring
+    service:
+      type: NodePort
+      nodePort: 30900
+    prometheusSpec:
+      serviceMonitorSelectorNilUsesHelmValues: true
+      podDnsConfig:
+        enabled: true
+        nameservers:
+          - 1.1.1.1
+        options:
+          - name: ndots
+            value: "2"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1
+          memory: 2Gi
+      storageSpec: {}
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+
+  alertmanager:
+    namespaceOverride: k8s-monitoring
+    alertmanagerSpec:
+      podDnsConfig:
+        enabled: true
+        nameservers:
+          - 1.1.1.1
+        options:
+          - name: ndots
+            value: "2"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1
+          memory: 2Gi
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+
+  nodeExporter:
+    namespaceOverride: k8s-monitoring
+    hostNetwork: true
+    podDnsConfig:
+      enabled: true
+      nameservers:
+        - 1.1.1.1
+      options:
+        - name: ndots
+          value: "2"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi
+    tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"

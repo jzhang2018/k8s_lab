@@ -1,0 +1,20 @@
+---
+
+- name: Install Helm plugin
+  hosts: localhost  # ansible controller
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Ensure HELM plugins directory exists
+      file:
+        path: "/home/{{ ansible_user }}/.local/share/helm/plugins"
+        state: directory
+        mode: '0755'
+        recurse: true
+
+    - name: Install Helm plugins
+      ansible.builtin.command: "helm plugin install {{ item.url }}"
+      args:
+        creates: "/home/{{ ansible_user }}/.local/share/helm/plugins/{{ item.name }}"
+      loop: "{{ helm_plugins }}"
+      changed_when: false

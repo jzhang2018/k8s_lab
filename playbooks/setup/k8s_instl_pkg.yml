@@ -29,3 +29,8 @@
         name: kubelet
         enabled: true
         state: started
+
+    - name: Install Kubernetes Python client system-wide
+      ansible.builtin.pip:
+        name: kubernetes
+        executable: /usr/bin/pip3

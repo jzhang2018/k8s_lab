@@ -1,0 +1,14 @@
+---
+
+- name: Add helm repos
+  ansible.builtin.import_playbook: add_repos.yml
+
+- name: Install helm plugins
+  ansible.builtin.import_playbook: instl_plugins.yml
+
+- name: Enable auto-completion
+  ansible.builtin.import_playbook: enable_autocompl.yml
+
+- name: Run a test chart deployment
+  ansible.builtin.import_playbook: test_helm.yml
+

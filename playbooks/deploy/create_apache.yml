@@ -1,0 +1,8 @@
+---
+- name: Deploy Apache Httpd
+  hosts: apache
+  connection: local
+  gather_facts: no
+  
+  roles:
+    - ../../roles/helm_chart

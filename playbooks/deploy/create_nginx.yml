@@ -1,0 +1,8 @@
+---
+- name: Deploy Nginx
+  hosts: nginx
+  connection: local
+  gather_facts: no
+  
+  roles:
+    - ../../roles/helm_chart

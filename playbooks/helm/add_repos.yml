@@ -1,0 +1,27 @@
+---
+
+- name: Add Helm chart repositories
+  hosts: localhost  # ansible controller
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Add Bitnami repo
+      ansible.builtin.command:
+        cmd: "helm repo add {{ item.name }} {{ item.url }}"
+      loop: "{{ helm_repos }}"
+      changed_when: false
+
+    - name: Update Helm repos
+      ansible.builtin.command:
+        cmd: helm repo update
+      changed_when: false
+
+    - name: List Helm repos
+      ansible.builtin.command:
+        cmd: helm repo list
+      register: helm_repos
+      changed_when: false
+
+    - name: Print out Helm repo list
+      ansible.builtin.debug:
+        msg: "{{ helm_repos.stdout_lines | map('replace', '\t', ' ') | list }}"

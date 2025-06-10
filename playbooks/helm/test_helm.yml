@@ -1,0 +1,30 @@
+---
+
+- name: Install NGINX via Helm using kubernetes.core.helm
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    test_namespace: 'my-test-namespace'
+  tasks:
+    - name: Install nginx with Helm
+      kubernetes.core.helm:
+        name: my-nginx-nodeport
+        chart_ref: bitnami/nginx
+        release_namespace: "{{ test_namespace }}"
+        create_namespace: true
+        values:
+          service:
+            type: NodePort
+            nodePorts:
+              http: 30080
+              https: 30443
+        timeout: 600s
+        kubeconfig: "{{ kubeconfig_path }}"
+        update_repo_cache: true
+        wait: true
+      register: deploy_status
+    
+    - name: Print out chart deployment status
+      ansible.builtin.debug:
+        msg: "{{ deploy_status.status }}"
