@@ -1,5 +1,7 @@
 # k8s_lab
 
+![k8s_lab drawio](https://github.com/user-attachments/assets/5c041008-e3b1-4406-a715-a07975706e61)
+
 Master lab setup playbooK (including assertions): </br>
 ansible-playbook -i inventory/hosts.yml playbooks/setup/site.yml </br>
 
