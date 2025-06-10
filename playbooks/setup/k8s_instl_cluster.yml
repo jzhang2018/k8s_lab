@@ -34,8 +34,8 @@
   roles:
     - roles/kubelet_dns
   
-# ----------------------- Install Calico CNI, apply COreDNS patch on master node --------------------- #
-- name: Install Calico CNI, apply COreDNS patch on master node
+# ----------------------- Install Calico CNI, apply CoreDNS patch on master node --------------------- #
+- name: Install Calico CNI, apply CoreDNS patch on master node
   hosts: master
   gather_facts: false
   become: true
