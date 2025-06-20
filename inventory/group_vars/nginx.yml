@@ -1,7 +1,7 @@
 ---
 
 k8s_namespace: 'k8s-lab'
-release_name: "my-nginx-nodeport"
+helm_release_name: "my-nginx-nodeport"
 
 # nginx chart variables
 helm_chart_ref: 'bitnami/nginx'

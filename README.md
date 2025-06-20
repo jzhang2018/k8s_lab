@@ -27,7 +27,7 @@ ansible-playbook -i inventory/hosts.yml -l nginx_host playbooks/deploy/create_ng
 ansible-playbook -i inventory/hosts.yml -l apache_host playbooks/deploy/create_apache.yml </br>
 
 Cleanup Deployment
-ansible-playbook -i inventory/hosts.yml -l cleanup_host playbooks/cleanup/cleanup.yml -e "{rn: my_rn, ns: my_ns, crds: [crd1, crd2, ...]" </br>
+ansible-playbook -i inventory/hosts.yml -l cleanup_host playbooks/cleanup/cleanup.yml -e "{rn: my_rn, ns: my_ns, crds: [crd1, crd2, ...]}" </br>
 i.e.: </br> 
 
 ansible-playbook -i inventory/hosts.yml -l cleanup_host playbooks/cleanup/cleanup.yml \
@@ -35,3 +35,6 @@ ansible-playbook -i inventory/hosts.yml -l cleanup_host playbooks/cleanup/cleanu
 
 Install k8s Monitoring Stack
 ansible-playbook -i inventory/hosts.yml -l mon_stack_host playbooks/mon/instl_mon_stack.yml --ask-vault-pass </br>
+
+Install k8s CD Tool - Argo CD
+ansible-playbook -i inventory/hosts.yml -l argo_cd_host playbooks/devops/instl_argo_cd.yml </br>

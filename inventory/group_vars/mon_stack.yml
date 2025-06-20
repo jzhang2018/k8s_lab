@@ -1,7 +1,7 @@
 ---
 
 k8s_namespace: 'k8s-monitoring'
-release_name: 'kube-prometheus-stack'
+helm_release_name: 'kube-prometheus-stack'
 
 # kube-prometheus-stack chart variables
 helm_chart_ref: 'prometheus-community/kube-prometheus-stack'

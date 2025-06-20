@@ -3,7 +3,7 @@
   
 - name: Install/upgrade helm release
   kubernetes.core.helm:
-    name: "{{ release_name }}"
+    name: "{{ helm_release_name }}"
     chart_ref: "{{ helm_chart_ref }}"
     chart_version: "{{ helm_chart_version }}"
     release_namespace: "{{ k8s_namespace }}"
@@ -14,6 +14,8 @@
     update_repo_cache: true
     wait: true
     timeout: "{{ helm_chart_timeout }}"
+    atomic: true
+    force: true
   register: helm_result
   notify: Post Deployment Tests
 

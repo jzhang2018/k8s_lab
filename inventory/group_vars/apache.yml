@@ -1,7 +1,7 @@
 ---
 
 k8s_namespace: 'k8s-lab'
-release_name: "my-apache-nodeport"
+helm_release_name: "my-apache-nodeport"
 
 # apache chart variables
 helm_chart_ref: 'bitnami/apache'
