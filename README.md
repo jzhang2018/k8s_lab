@@ -21,10 +21,11 @@ ansible-playbook -i inventory/hosts.yml playbooks/helm/add_repos.yml </br>
 ansible-playbook -i inventory/hosts.yml playbooks/helm/instl_plugins.yml </br>
 ansible-playbook -i inventory/hosts.yml playbooks/helm/enable_autocompl.yml  </br>
 ansible-playbook -i inventory/hosts.yml playbooks/helm/test_helm.yml  </br>
+ansible-playbook -i inventory/hosts.yml playbooks/helm/site.yml  </br>
 
 Helm Deployment Playbooks: </br>
-ansible-playbook -i inventory/hosts.yml -l nginx_host playbooks/deploy/create_nginx.yml </br>
-ansible-playbook -i inventory/hosts.yml -l apache_host playbooks/deploy/create_apache.yml </br>
+ansible-playbook -i inventory/hosts.yml -l nginx_host playbooks/deploy/nginx.yml </br>
+ansible-playbook -i inventory/hosts.yml -l apache_host playbooks/deploy/apache.yml </br>
 
 Cleanup Deployment
 ansible-playbook -i inventory/hosts.yml -l cleanup_host playbooks/cleanup/cleanup.yml -e "{rn: my_rn, ns: my_ns, crds: [crd1, crd2, ...]}" </br>

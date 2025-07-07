@@ -1,0 +1,61 @@
+---
+- name: Deploy Apache Httpd
+  hosts: apache
+  connection: local
+  gather_facts: no
+  
+  tasks:
+    - name: Create ConfigMap for Apache mod_status to inject status.conf
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: apache-status-config
+            namespace: "{{ k8s_namespace }}"
+          data:
+            status.conf: |
+              ExtendedStatus On
+
+              <Location "/server-status">
+                  SetHandler server-status
+                  Require all granted
+              </Location>
+
+    - name: Execute helm chart role for apache deployment
+      include_role:
+        name: ../../roles/helm_chart
+
+    - name: Create ServiceMonitor for Apache to begin Prometheus scraping
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: monitoring.coreos.com/v1
+          kind: ServiceMonitor
+          metadata:
+            name: apache
+            namespace: k8s-monitoring # must be Prometheus namespace, TODO - prameterize it
+            labels:
+              release: kube-prometheus-stack
+          spec:
+            selector:
+              matchLabels:
+                app.kubernetes.io/name: apache
+                app.kubernetes.io/instance: my-apache-nodeport  # TODO - prameterize it
+            namespaceSelector:
+              matchNames:
+                - k8s-lab # <--- still targets Apache's namespace, TODO - prameterize it
+            endpoints:
+              - port: http
+                path: /server-status?auto
+                interval: 15s
+                scheme: http
+              - port: https
+                path: /server-status?auto
+                interval: 15s
+                scheme: https
+                tlsConfig:
+                  insecureSkipVerify: true
+
+ 

@@ -6,15 +6,32 @@ helm_release_name: "my-apache-nodeport"
 # apache chart variables
 helm_chart_ref: 'bitnami/apache'
 helm_chart_version: '11.3.9'
+helm_chart_timeout: 15m
 
 # apache release values (dict)
 values:
    service:
       type: NodePort
+      # ports:
+      #   - name: http
+      #     port: 80
+      #     targetPort: http  # this maps tp target containerPort named 'http', which is 8080 in bitnami/apache helm chart
+      #     nodePort: 31080
+      #   - name: https
+      #     port: 443
+      #     targetPort: https  # this maps tp target containerPort named 'https', which is 8443 in bitnami/apache helm chart
+      #     nodePort: 31443
       nodePorts:
         http: 31080
         https: 31443
-      annotations:
-         prometheus.io/scrape: "true"
-         prometheus.io/port: "8080"
-         prometheus.io/path: "/metrics"
+ 
+   extraVolumes:
+      - name: status-config
+        configMap:
+         name: apache-status-config
+
+   extraVolumeMounts:
+      - name: status-config
+        mountPath: /vhosts/status.conf
+        subPath: status.conf
+        readOnly: true

@@ -13,7 +13,8 @@
     kubeconfig: "{{ kubeconfig_path }}"
     update_repo_cache: true
     wait: true
-    timeout: "{{ helm_chart_timeout }}"
+    # timeout: "{{ helm_chart_timeout }}"
+    timeout: "{{ helm_chart_timeout | default('5m') }}" # default 5m if timeout is undefined
     atomic: true
     force: true
   register: helm_result
