@@ -27,6 +27,7 @@
                   pods insecure
                   fallthrough in-addr.arpa ip6.arpa
               }
+              prometheus :9153
               forward . 8.8.8.8 1.1.1.1 {
                   max_concurrent 1000
               }
@@ -44,7 +45,7 @@
     namespace: kube-system
     name: coredns
     wait: yes
-    wait_timeout: 60
+    wait_timeout: 120
     definition:
       spec:
         template:
