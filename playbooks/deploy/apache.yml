@@ -48,14 +48,16 @@
                 - k8s-lab # <--- still targets Apache's namespace, TODO - prameterize it
             endpoints:
               - port: http
-                path: /server-status?auto
+                path: /server-status
+                params:
+                  auto: [""]  # query string auto
                 interval: 15s
                 scheme: http
               - port: https
-                path: /server-status?auto
+                path: /server-status
+                params:
+                  auto: [""]  # query string auto
                 interval: 15s
                 scheme: https
                 tlsConfig:
                   insecureSkipVerify: true
-
- 
