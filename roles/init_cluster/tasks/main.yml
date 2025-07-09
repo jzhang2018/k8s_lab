@@ -7,10 +7,6 @@
     creates: /etc/kubernetes/admin.conf
   register: kubeadm_output
 
-# - name: Debug - print out kubeadm_output (check join command)
-#   ansible.builtin.debug:
-#     msg: "{{ kubeadm_output }}"
-
 - name: Create .kube directory under k8s user
   ansible.builtin.file:
     path: "/home/{{ k8s_user }}/.kube"
@@ -49,7 +45,6 @@
     flat: true
 
 # ----------------------- Enable Monitoring Endpoints ----------------------- #
-
 # kube-controller-manager endpoint
 # if prometheus is not running at the master node. 0.0.0.0 makes the metrics endpoint 
 # accessible from any interface, so it is better to secure it (TODO)
