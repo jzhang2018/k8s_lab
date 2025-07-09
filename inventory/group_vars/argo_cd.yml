@@ -1,0 +1,36 @@
+---
+
+k8s_namespace: 'k8s-devops'
+helm_release_name: 'argo-cd'
+
+# offical Argo helm chart repo, it installs CRDs automatically by default
+helm_chart_ref: 'argo/argo-cd'
+
+helm_chart_version: '8.1.1'
+helm_chart_timeout: 15m
+
+# argo-cd release values (dict)
+values:
+  server:
+    service:
+      type: NodePort
+      nodePortHttp: 32080
+      nodePortHttps: 32443
+      ports:
+        http: 8080
+        https: 443
+    ingress:
+      enabled: false  # I am using NodePort, so ingress is off
+    extraArgs:
+      - --insecure  # serve on HTTP only (no TLS)
+
+  configs:
+    params:
+      server.insecure: true
+    cm: # ConfigMap
+      url: "http://{{ groups['workers'][0] }}:32080"  # re-direct url when logout
+    secret:
+      argocdServerAdminPassword: "$2y$10$FYA6MPAjxuGP1PDGgqVOlePfn5fdDm2T0qz7EiLPhlAE6yaYOmwj6"
+      argocdServerAdminPasswordMtime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+

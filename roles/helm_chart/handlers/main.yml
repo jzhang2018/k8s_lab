@@ -6,7 +6,7 @@
     kind: "{{ item }}"
     namespace: "{{ k8s_namespace }}"
     label_selectors:
-      - "app.kubernetes.io/instance={{ release_name }}"
+      - "app.kubernetes.io/instance={{ helm_release_name }}"
   register: k8s_outputs
   loop:
     - Deployment

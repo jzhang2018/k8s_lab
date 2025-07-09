@@ -1,20 +1,45 @@
 ---
 
 k8s_namespace: 'k8s-lab'
-release_name: "my-apache-nodeport"
+helm_release_name: "my-apache-nodeport"
 
 # apache chart variables
 helm_chart_ref: 'bitnami/apache'
 helm_chart_version: '11.3.9'
+helm_chart_timeout: 15m
 
 # apache release values (dict)
 values:
-   service:
-      type: NodePort
-      nodePorts:
-        http: 31080
-        https: 31443
-      annotations:
-         prometheus.io/scrape: "true"
-         prometheus.io/port: "8080"
-         prometheus.io/path: "/metrics"
+  service:
+    type: NodePort
+    nodePorts:
+      http: 31080
+      https: 31443
+    ports:
+      http:
+        port: 8080         # This is the port exposed by the Service inside the cluster
+        targetPort: http   # This must match the container's named port (usually "http")
+        nodePort: 31080    # This is the external NodePort to access Apache via <NodeIP>:31080
+        protocol: TCP
+      https:
+        port: 8443
+        targetPort: https
+        nodePort: 31443
+        protocol: TCP
+    labels:
+      app.kubernetes.io/name: apache
+      app.kubernetes.io/instance: my-apache-nodeport
+
+  extraVolumes:
+    - name: status-config
+      configMap:
+        name: apache-status-config
+
+  extraVolumeMounts:
+    - name: status-config
+      mountPath: /opt/bitnami/apache/conf/custom/status.conf
+      subPath: status.conf
+      readOnly: true
+
+  extraConfiguration: |
+    Include "/opt/bitnami/apache/conf/custom/status.conf"  

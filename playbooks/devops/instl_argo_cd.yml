@@ -1,0 +1,10 @@
+---
+- name: Deploy argo cd
+  hosts: argo_cd
+  connection: local
+  gather_facts: no
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}" 
+  
+  roles:
+    - ../../roles/helm_chart
