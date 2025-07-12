@@ -1,0 +1,14 @@
+---
+# tasks file for pre_requisites
+
+- name: System Prep
+  ansible.builtin.include_tasks: sys_prep.yml
+
+- name: Install Container Runtime CRI-O
+  ansible.builtin.include_tasks: instl_crio.yml
+
+- name: Install k8s Packages
+  ansible.builtin.include_tasks: instl_pkg.yml
+
+- name: Assertion test
+  ansible.builtin.include_tasks: assert.yml

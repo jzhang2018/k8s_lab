@@ -1,0 +1,9 @@
+---
+
+## ---------------------- Master and Worker Nodes ---------------------- ##
+- name: Configurations for all nodes (master and worker)
+  hosts: master, workers
+  gather_facts: false
+  become: true
+  roles:
+    - roles/pre_requisites
