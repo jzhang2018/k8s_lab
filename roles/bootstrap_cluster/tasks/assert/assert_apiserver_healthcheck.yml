@@ -1,0 +1,18 @@
+---
+
+# --------- Check Kubernetes API server health via url --------- #
+- name: Check Kubernetes API server health via url
+  ansible.builtin.uri:
+    url: "https://{{ groups['master'][0] }}:6443/healthz"
+    method: GET
+    validate_certs: false
+    status_code: 200
+  register: api_health
+  ignore_errors: true
+
+- name: Assert - API server is healthy
+  ansible.builtin.assert:
+    that:
+      - "api_health.status == 200"
+    fail_msg: "Assertion Failed - API server is NOT healthy"
+    success_msg: "Assertion Passed - API server is healthy"

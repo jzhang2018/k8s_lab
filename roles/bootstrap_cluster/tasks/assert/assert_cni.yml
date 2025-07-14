@@ -1,0 +1,14 @@
+---
+
+# ---------- Check if CNI config exists ---------- #
+- name: Check if CNI config exists
+  ansible.builtin.stat:
+    path: /etc/cni/net.d
+  register: cni_config
+
+- name: Assert - CNI config exists
+  ansible.builtin.assert:
+    that:
+      - "cni_config.stat.exists"
+    fail_msg: "Assertion Failed - CNI configuration directory /etc/cni/net.d does not exist"
+    success_msg: "Assertion PASSED - CNI configuration directory /etc/cni/net.d exists"

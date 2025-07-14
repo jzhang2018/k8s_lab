@@ -1,0 +1,15 @@
+---
+
+# ----------- Ensure kube-controller-manager is running ----------- #
+- name: Ensure kube-controller-manager is running
+  ansible.builtin.command: pgrep -f kube-controller-manager
+  register: controller_proc
+  failed_when: controller_proc.rc != 0
+  changed_when: false
+
+- name: Assert - kube-controller-manager is running
+  ansible.builtin.assert:
+    that:
+      - "controller_proc.rc == 0"
+    fail_msg: "Assertion Failed - Controller manager proc is NOT running"
+    success_msg: "Assertion PASSED - Controller manager proc is running"

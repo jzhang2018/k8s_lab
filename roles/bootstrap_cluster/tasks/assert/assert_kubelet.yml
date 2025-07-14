@@ -1,0 +1,16 @@
+---
+
+# --------- Check if kubelet is running --------- #
+- name: Ensure kubelet is running
+  ansible.builtin.systemd_service:
+    name: kubelet
+    state: started
+    enabled: true
+  register: kubelet_status
+
+- name: Assert - kubelet is running
+  ansible.builtin.assert:
+    that:
+      - "kubelet_status.state == 'started'"
+    fail_msg: "Assertion Failed - kubelet is NOT running"
+    success_msg: "Assertion PASSED - kubelet is running"

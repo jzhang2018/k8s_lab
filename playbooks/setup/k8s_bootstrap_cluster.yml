@@ -1,0 +1,7 @@
+---
+
+- name: Bootstrap Kubernetes cluster
+  hosts: master, workers, controller
+  become: yes
+  roles:
+    - roles/bootstrap_cluster

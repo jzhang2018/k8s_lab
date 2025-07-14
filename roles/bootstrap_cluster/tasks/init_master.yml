@@ -1,0 +1,110 @@
+---
+# tasks file for bootstrap_cluster
+
+- name: Template kubeadm config file
+  ansible.builtin.template:
+    src: kubeadm-config.yml.j2
+    dest: /tmp/kubeadm-config.yml
+    mode: '0644'
+
+- name: Initialize Kubernetes cluster
+  ansible.builtin.command: kubeadm init --config=/tmp/kubeadm-config.yml
+  args:
+    creates: /etc/kubernetes/admin.conf
+  register: kubeadm_output
+
+- name: Create .kube directory under k8s user
+  ansible.builtin.file:
+    path: "/home/{{ k8s_user }}/.kube"
+    state: directory
+    owner: "{{ k8s_user }}"
+    group: "{{ k8s_user }}"
+    mode: '0755'
+
+- name: Copy kube config to k8s user's kube config
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ k8s_user }}/.kube/config"
+    remote_src: true # avoid to check source on local host (ansible controller)
+    owner: "{{ k8s_user }}"
+    group: "{{ k8s_user }}"
+    mode: '0600'
+
+- name: Fetch kube config from master node to Ansible controller for Ansible k8s work (K8s core and helm)
+  ansible.builtin.fetch:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    flat: true
+
+# K8s provides a join command that includes a token and the master node’s IP address to
+# allow worker nodes to connect to the cluster
+- name: Save join command on master node
+  ansible.builtin.shell: |
+    kubeadm token create --print-join-command > /tmp/kubeadm_join.sh
+  when: "'/tmp/kubeadm_join.sh' not in kubeadm_output.stdout"
+  changed_when: false
+
+- name: Fetch join command to Ansible controller from master node for later use
+  ansible.builtin.fetch:
+    src: /tmp/kubeadm_join.sh
+    dest: /tmp/k8s-join-command/
+    flat: true
+
+# ----------------------- Enable Monitoring Endpoints ----------------------- #
+# kube-controller-manager endpoint
+# if prometheus is not running at the master node. 0.0.0.0 makes the metrics endpoint 
+# accessible from any interface, so it is better to secure it (TODO)
+- name: Change bind-address to 0.0.0.0 for kube-controller-manager 
+  ansible.builtin.replace:
+    path: /etc/kubernetes/manifests/kube-controller-manager.yaml
+    regexp: '^(\s*)- --bind-address=.*'
+    replace: '\1- --bind-address=0.0.0.0'
+
+# exposes metrics over HTTPS on secure-port 10257
+- name: Ensure secure port is enabled on kube-controller-manager
+  ansible.builtin.lineinfile:
+    path: /etc/kubernetes/manifests/kube-controller-manager.yaml
+    line: "    - --secure-port=10257"
+    insertafter: '^ *- --use-service-account-credentials'
+    create: no
+
+# etcd endpoint
+# if prometheus is not running at the master node. 0.0.0.0 makes the metrics endpoint 
+# accessible from any interface, so it is better to secure it (TODO)
+- name: Update etcd metrics listen address to allow scraping
+  ansible.builtin.replace:
+    path: /etc/kubernetes/manifests/etcd.yaml
+    regexp: '--listen-metrics-urls=http://127\.0\.0\.1:2381'
+    replace: '--listen-metrics-urls=http://0.0.0.0:2381'
+
+# kube-scheduler endpoint
+# if prometheus is not running at the master node. 0.0.0.0 makes the metrics endpoint 
+# accessible from any interface, so it is better to secure it (TODO)
+- name: Allow Prometheus to scrape kube-scheduler metrics by changing bind address
+  ansible.builtin.replace:
+    path: /etc/kubernetes/manifests/kube-scheduler.yaml
+    regexp: '--bind-address=127\.0\.0\.1'
+    replace: '--bind-address=0.0.0.0'
+
+# kube-proxy endpoint
+# if prometheus is not running at the master node. 0.0.0.0 makes the metrics endpoint 
+# accessible from any interface, so it is better to secure it (TODO)
+- name: Enable metrics endpoint for kube-proxy
+  ansible.builtin.shell: |
+    kubectl -n kube-system get configmap kube-proxy -o yaml | \
+    sed 's/metricsBindAddress: ""/metricsBindAddress: 0.0.0.0:10249/' | \
+    kubectl apply -f -
+  args:
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Restart kube-proxy pods
+  ansible.builtin.shell: |
+    kubectl -n kube-system delete pod -l k8s-app=kube-proxy
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+
+
+

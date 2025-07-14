@@ -1,0 +1,21 @@
+---
+
+# ---------- Check if kubectl can Get component statuses ---------- #
+- name: Check if kubectl can Get component statuses
+  ansible.builtin.command: kubectl get componentstatuses
+  register: component_statuses
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Assert - k8s component is healthy
+  ansible.builtin.assert:
+    that:
+      - item_status.split()[1] == "Healthy"
+    fail_msg: "Assertion Failed - component is not healthy: {{ item_status }}"
+    success_msg: "Assertion PASSED - component is healthy"
+  loop: "{{ component_statuses.stdout_lines[1:] }}"
+  loop_control:
+    label: "{{ item_status }}"
+  vars:
+    item_status: "{{ item }}"

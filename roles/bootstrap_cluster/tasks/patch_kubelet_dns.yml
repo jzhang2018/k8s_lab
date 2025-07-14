@@ -1,0 +1,50 @@
+---
+
+# Run on master and worker nodes
+- name: Ensure /etc/kubelet-resolv.conf contains k8s DNS server and set number of dot to 2 for lower FQDN
+  ansible.builtin.copy:
+    dest: /etc/kubelet-resolv.conf
+    content: |
+      nameserver 10.96.0.10
+      options ndots:2
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart kubelet
+
+- name: Ensure resolvConf is present in kubelet config
+  ansible.builtin.blockinfile:
+    path: /var/lib/kubelet/config.yaml
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      resolvConf: "/etc/kubelet-resolv.conf"
+    backup: yes
+  notify: Restart kubelet
+
+- name: Ensure kubelet systemd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/kubelet.service.d
+    state: directory
+    mode: '0755'
+
+- name: Add systemd override to use custom resolv.conf
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/kubelet.service.d/10-custom-dns.conf
+    content: |
+      [Service]
+      Environment="KUBELET_EXTRA_ARGS=--config=/var/lib/kubelet/config.yaml"
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart kubelet
+
+# This is safeguard task that prevents '--resolv-conf' flag is added unintentionally 
+- name: Ensure --resolv-conf is not present in kubeadm-flags.env
+  ansible.builtin.lineinfile:
+    path: /var/lib/kubelet/kubeadm-flags.env
+    regexp: '--resolv-conf=.*?(?=(\s|$))'
+    state: absent
+    backup: yes
+  notify: Restart kubelet

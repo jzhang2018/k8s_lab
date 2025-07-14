@@ -6,12 +6,8 @@ Master lab setup playbooK (including assertions): </br>
 ansible-playbook -i inventory/hosts.yml playbooks/setup/site.yml </br>
 
 Individual Lab Setup Playbooks: </br>
-ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_sys_prereq.yml </br>
-ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_instl_pkg.yml  </br>
-ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_instl_crio.yml </br>
-ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_sys_assert.yml  </br>
-ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_instl_cluster.yml  </br>
-ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_cluster_assert.yml  </br>
+ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_bootstrap_cluster.yml </br>
+ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_pre_requisites.yml </br>
 
 Master helm setup playbook (including a sample testing case): </br>
 ansible-playbook -i inventory/hosts.yml playbooks/helm/site.yml </br>

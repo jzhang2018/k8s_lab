@@ -1,0 +1,16 @@
+ 
+---
+
+# ----------- Ensure kube-apiserver is running ----------- #
+- name: Ensure kube-apiserver is running
+  ansible.builtin.command: pgrep -f kube-apiserver
+  register: apiserver_proc
+  failed_when: apiserver_proc.rc != 0
+  changed_when: false
+
+- name: Assert - kube-apiserver is running
+  ansible.builtin.assert:
+    that:
+      - "apiserver_proc.rc == 0"
+    fail_msg: "Assertion Failed - API server proc is NOT running"
+    success_msg: "Assertion PASSED - API server proc is running"
