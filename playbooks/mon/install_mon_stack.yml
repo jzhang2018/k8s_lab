@@ -5,7 +5,7 @@
   gather_facts: no
   environment:
     KUBECONFIG: "{{ kubeconfig_path }}" 
-  
+
   roles:
-    - ../../roles/mon_stack_crds
-    - ../../roles/helm_chart
+    - mon_stack_wrapper
+  

@@ -1,0 +1,12 @@
+---
+# tasks file for mon_stack_wrapper
+
+- name: Install kube-prometheus-stack CRDs first
+  ansible.builtin.include_tasks: install_crds.yml
+
+- name: Install monitoring stack via Helm
+  ansible.builtin.include_role:
+    name: helm_chart
+
+- name: Assertion test
+  ansible.builtin.include_tasks: assert.yml
