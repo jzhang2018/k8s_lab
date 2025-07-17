@@ -33,6 +33,10 @@
         restartPolicy: Never
   register: dns_test_pod
 
+- name: Debug - dns_test_pod
+  ansible.builtin.debug:
+    msg: "{{ dns_test_pod }}"
+
 - name: Wait for dns-tester pod to complete
   kubernetes.core.k8s_info:
     kubeconfig: /etc/kubernetes/admin.conf
@@ -41,7 +45,7 @@
     name: dns-tester
   register: dns_test_result
   until: dns_test_result.resources[0].status.phase in ['Succeeded', 'Failed']
-  retries: 10
+  retries: 20
   delay: 3
 
 - name: Assert DNS test succeeded

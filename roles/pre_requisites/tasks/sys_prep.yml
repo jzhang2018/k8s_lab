@@ -81,3 +81,8 @@
     reload: true
   loop: ['net.bridge.bridge-nf-call-iptables', 'net.bridge.bridge-nf-call-ip6tables', 'net.ipv4.ip_forward']
 
+# ------------ Install skopeo-------------- #
+- name: Install skopeo
+  ansible.builtin.package:
+    name: skopeo
+    state: present

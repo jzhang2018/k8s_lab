@@ -13,6 +13,9 @@
 - ansible.builtin.include_tasks: install_calico.yml
   when: "'master' in group_names"
 
+# - ansible.builtin.include_tasks: patch_calico.yml
+#   when: "'master' in group_names"
+
 - ansible.builtin.include_tasks: patch_coredns.yml
   when: "'master' in group_names"
 

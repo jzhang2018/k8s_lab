@@ -2,6 +2,11 @@
 
 - name: k8s Pre-requisites Playbook
   ansible.builtin.import_playbook: k8s_pre_requisites.yml
+  tags:
+    - pre
+    - local_mirror_one_time
 
 - name: K8s Cluster Bootstrap Playbook
   ansible.builtin.import_playbook: k8s_bootstrap_cluster.yml
+  tags:
+    - bootstrap

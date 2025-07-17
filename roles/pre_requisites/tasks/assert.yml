@@ -1,160 +1,212 @@
 ---
 
-## ---------------------- Master and Worker Nodes ---------------------- ##
 # --------------- Verify if swap is disabled --------------- #
-- name: Verify swap usage
-  ansible.builtin.command: swapon --noheadings --summary
-  register: swap_status
-  failed_when: false
-  changed_when: false
-
-- name: Assert - swap is disabled
-  ansible.builtin.assert:
-    that:
-      - "swap_status.stdout == ''"
-    fail_msg: "Swap is NOT DISABLED"
-    success_msg: "Assertion PASSED - Swap is DISABLED"
+- block:
+  - name: Verify swap usage
+    ansible.builtin.command: swapon --noheadings --summary
+    register: swap_status
+    failed_when: false
+    changed_when: false
+   
+  - name: Assert - swap is disabled
+    ansible.builtin.assert:
+      that:
+        - "swap_status.stdout == ''"
+      fail_msg: "Swap is NOT DISABLED"
+      success_msg: "Assertion PASSED - Swap is DISABLED"
+  when: "'master' in group_names or 'workers' in group_names" 
 
 # --------------- Verify if SELinux is set to permissive --------------- #
-- name: Verify SELinux is set to permissive mode
-  ansible.builtin.command: getenforce
-  register: selinux_mode
-  changed_when: false
-
-- name: Assert - SELinux mode is set to Permissive mode
-  ansible.builtin.assert:
-    that:
-      - "selinux_mode.stdout == 'Permissive'"
-    fail_msg: "Assertion Failed - SELinux is NOT set to Permissive"
-    success_msg: "Assertion Passed - SELinux is set to Permissive"
+- block:
+  - name: Verify SELinux is set to permissive mode
+    ansible.builtin.command: getenforce
+    register: selinux_mode
+    changed_when: false
+   
+  - name: Assert - SELinux mode is set to Permissive mode
+    ansible.builtin.assert:
+      that:
+        - "selinux_mode.stdout == 'Permissive'"
+      fail_msg: "Assertion Failed - SELinux is NOT set to Permissive"
+      success_msg: "Assertion Passed - SELinux is set to Permissive"
+  when: "'master' in group_names or 'workers' in group_names" 
 
 # --------------- Verify if firewall is stopped, disabled and masked --------------- #
-- name: Gather firewalld service facts
-  ansible.builtin.systemd:
-    name: firewalld
-  register: firewalld_status
+- block:
+  - name: Gather firewalld service facts
+    ansible.builtin.systemd:
+      name: firewalld
+    register: firewalld_status
+    
+  - name: Extract firewalld service info
+    ansible.builtin.set_fact:
+        fw_masked: "{{ firewalld_status.status.UnitFileState == 'masked' or firewalld_status.status.LoadState == 'masked' }}"
+        fw_active_state: "{{ firewalld_status.status.ActiveState }}"
+        fw_sub_state: "{{ firewalld_status.status.SubState }}"
 
-- name: Extract firewalld service info
-  ansible.builtin.set_fact:
-      fw_masked: "{{ firewalld_status.status.UnitFileState == 'masked' or firewalld_status.status.LoadState == 'masked' }}"
-      fw_active_state: "{{ firewalld_status.status.ActiveState }}"
-      fw_sub_state: "{{ firewalld_status.status.SubState }}"
-
-- name: Assert firewalld is disabled and masked
-  ansible.builtin.assert:
-    that:
-      - fw_masked
-      - "'inactive' in fw_active_state"
-      - "'dead' in fw_sub_state"
-    fail_msg: "Assertion Failed - firewalld is NOT inactive/dead NOR masked"
-    success_msg: "Assertion Passed - firewalld is disabled/dead and masked"
+  - name: Assert firewalld is disabled and masked
+    ansible.builtin.assert:
+      that:
+        - fw_masked
+        - "'inactive' in fw_active_state"
+        - "'dead' in fw_sub_state"
+      fail_msg: "Assertion Failed - firewalld is NOT inactive/dead NOR masked"
+      success_msg: "Assertion Passed - firewalld is disabled/dead and masked"
+  when: "'master' in group_names or 'workers' in group_names"
 
 # --------------- Verify if kernel modules are loaded --------------- #
-- name: Get list of loaded kernel modules
-  ansible.builtin.command: lsmod
-  register: lsmod_output
-  changed_when: false
-
-- name: Assert required kernel modules are loaded
-  ansible.builtin.assert:
-    that:
-      - "'br_netfilter' in lsmod_output.stdout"
-      - "'overlay' in lsmod_output.stdout"
-      - "'ip_vs' in lsmod_output.stdout"
-      - "'ip_vs_rr' in lsmod_output.stdout"
-      - "'ip_vs_wrr' in lsmod_output.stdout"
-      - "'ip_vs_sh' in lsmod_output.stdout"
-    fail_msg: "Assertion Failed - One or more required kernel modules are not loaded"
-    success_msg: "Assertion Passed - All required kernel modules are loaded"
+- block:
+  - name: Get list of loaded kernel modules
+    ansible.builtin.command: lsmod
+    register: lsmod_output
+    changed_when: false
+    
+  - name: Assert required kernel modules are loaded
+    ansible.builtin.assert:
+      that:
+        - "'br_netfilter' in lsmod_output.stdout"
+        - "'overlay' in lsmod_output.stdout"
+        - "'ip_vs' in lsmod_output.stdout"
+        - "'ip_vs_rr' in lsmod_output.stdout"
+        - "'ip_vs_wrr' in lsmod_output.stdout"
+        - "'ip_vs_sh' in lsmod_output.stdout"
+      fail_msg: "Assertion Failed - One or more required kernel modules are not loaded"
+      success_msg: "Assertion Passed - All required kernel modules are loaded"
+  when: "'master' in group_names or 'workers' in group_names"
 
 # --------------- Verify if kernel parameters are set for ip bridge and forwarding --------------- #
-- name: Get net.bridge.bridge-nf-call-iptables
-  ansible.builtin.command: sysctl -n net.bridge.bridge-nf-call-iptables
-  register: iptables_value
-  changed_when: false
+- block:
+  - name: Get net.bridge.bridge-nf-call-iptables
+    ansible.builtin.command: sysctl -n net.bridge.bridge-nf-call-iptables
+    register: iptables_value
+    changed_when: false
+    
+  - name: Assert net.bridge.bridge-nf-call-iptables is 1
+    ansible.builtin.assert:
+      that:
+        - iptables_value.stdout | int == 1
+      fail_msg: "Assertion Failed - net.bridge.bridge-nf-call-iptables is NOT set to 1"
+      success_msg: "Assertion Passed - net.bridge.bridge-nf-call-iptables is set to 1"
+  
+  - name: Get net.bridge.bridge-nf-call-ip6tables
+    ansible.builtin.command: sysctl -n net.bridge.bridge-nf-call-ip6tables
+    register: ip6tables_value
+    changed_when: false
+  
+  - name: Assert net.bridge.bridge-nf-call-ip6tables is 1
+    ansible.builtin.assert:
+      that:
+        - ip6tables_value.stdout | int == 1
+      fail_msg: "Assertion Failed - net.bridge.bridge-nf-call-ip6tables is NOT set to 1"
+      success_msg: "Assertion Passed - net.bridge.bridge-nf-call-ip6tables is set to 1"
 
-- name: Assert net.bridge.bridge-nf-call-iptables is 1
-  ansible.builtin.assert:
-    that:
-      - iptables_value.stdout | int == 1
-    fail_msg: "Assertion Failed - net.bridge.bridge-nf-call-iptables is NOT set to 1"
-    success_msg: "Assertion Passed - net.bridge.bridge-nf-call-iptables is set to 1"
-
-- name: Get net.bridge.bridge-nf-call-ip6tables
-  ansible.builtin.command: sysctl -n net.bridge.bridge-nf-call-ip6tables
-  register: ip6tables_value
-  changed_when: false
-
-- name: Assert net.bridge.bridge-nf-call-ip6tables is 1
-  ansible.builtin.assert:
-    that:
-      - ip6tables_value.stdout | int == 1
-    fail_msg: "Assertion Failed - net.bridge.bridge-nf-call-ip6tables is NOT set to 1"
-    success_msg: "Assertion Passed - net.bridge.bridge-nf-call-ip6tables is set to 1"
-
-- name: Get net.ipv4.ip_forward
-  ansible.builtin.command: sysctl -n net.ipv4.ip_forward
-  register: ip_forward_value
-  changed_when: false
-
-- name: Assert net.ipv4.ip_forward is 1
-  ansible.builtin.assert:
-    that:
-      - ip_forward_value.stdout | int == 1
-    fail_msg: "Assertion Failed - net.ipv4.ip_forward is NOT set to 1"
-    success_msg: "Assertion Passed - net.ipv4.ip_forward is set to 1"
+  - name: Get net.ipv4.ip_forward
+    ansible.builtin.command: sysctl -n net.ipv4.ip_forward
+    register: ip_forward_value
+    changed_when: false
+  
+  - name: Assert net.ipv4.ip_forward is 1
+    ansible.builtin.assert:
+      that:
+        - ip_forward_value.stdout | int == 1
+      fail_msg: "Assertion Failed - net.ipv4.ip_forward is NOT set to 1"
+      success_msg: "Assertion Passed - net.ipv4.ip_forward is set to 1"
+  when: "'master' in group_names or 'workers' in group_names" 
 
 # --------------- Verify if CRI-O is installed --------------- #
-- name: Check for CRIO binary
-  ansible.builtin.command: which crio
-  register: crio_check
-  ignore_errors: true
-  changed_when: false
+- block:
+  - name: Check for CRIO binary
+    ansible.builtin.command: which crio
+    register: crio_check
+    ignore_errors: true
+    changed_when: false
+    
+  - name: Assert CRI-O is installed
+    ansible.builtin.assert:
+      that:
+        - crio_check.rc == 0
+      fail_msg: "Assertion Failed - CRI-O is NOT installed"
+      success_msg: "Assertion Passed - CRI-O is installed"
+  when: "'master' in group_names or 'workers' in group_names" 
 
-- name: Assert CRI-O is installed
-  ansible.builtin.assert:
-    that:
-      - crio_check.rc == 0
-    fail_msg: "Assertion Failed - CRI-O is NOT installed"
-    success_msg: "Assertion Passed - CRI-O is installed"
+# --------------- Verify local_registry_host DNS resolution --------------- #
+- block:
+  - name: Get IP address of local registry from target nodes
+    ansible.builtin.shell: "getent hosts {{ local_registry_host }}"
+    register: dns_result
+    changed_when: false
+    failed_when: false  # Let assert handle the failure
+  
+  - name: Assert that DNS resolution for local registry succeeded
+    ansible.builtin.assert:
+      that:
+        - dns_result.rc == 0
+        - dns_result.stdout is search(local_registry_host)
+      fail_msg: "Assertion Failed - DNS resolution failed for {{ local_registry_host }} on host {{ inventory_hostname }}"
+      success_msg: "Assertion Passed - DNS resolution succeeded for {{ local_registry_host }} on host {{ inventory_hostname }}"
+  when: "'master' in group_names or 'workers' in group_names or 'local_mirror' in group_names" 
 
+# --------------- Verify local mirror registry by inspecting calico image --------------- #
+- block:
+    - name: Check if Calico image exists in local mirror registry
+      shell: |
+        skopeo inspect --tls-verify=false docker://{{ local_registry_host }}:{{ local_registry_port }}/calico/{{ item }}:{{ calico_version }}
+      register: skopeo_inspect
+      failed_when: skopeo_inspect.rc != 0
+      changed_when: false
+      loop: "{{ calico_images }}"
+      loop_control:
+        label: "{{ item }}"
+    
+    - name: Assert Calico images are present in local mirror registry
+      assert:
+        that:
+          - item.rc == 0
+        fail_msg: "Assertion Failed - Calico image '{{ item.item }}' not found in local mirror registry {{ local_registry_host }}"
+        success_msg: "Assertion Passed - Calico image '{{ item.item }}' found in local mirror registry {{ local_registry_host }}"
+      loop: "{{ skopeo_inspect.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+  when: "'master' in group_names or 'workers' in group_names"
+ 
 # ---------------- Verify if kubelet, kubeadm and kubectl are installed --------------- #
-- name: Check if kubelet is installed
-  ansible.builtin.command: which kubelet
-  register: kubelet_check
-  ignore_errors: true
-  changed_when: false
+- block:
+  - name: Check if kubelet is installed
+    ansible.builtin.command: which kubelet
+    register: kubelet_check
+    ignore_errors: true
+    changed_when: false
+  
+  - name: Check if kubeadm is installed
+    ansible.builtin.command: which kubeadm
+    register: kubeadm_check
+    ignore_errors: true
+    changed_when: false
+ 
+  - name: Check if kubectl is installed
+    ansible.builtin.command: which kubectl
+    register: kubectl_check
+    ignore_errors: true
+    changed_when: false
 
-- name: Check if kubeadm is installed
-  ansible.builtin.command: which kubeadm
-  register: kubeadm_check
-  ignore_errors: true
-  changed_when: false
+  - name: Assert kubelet is installed
+    ansible.builtin.assert:
+      that:
+        - kubelet_check.rc == 0
+      fail_msg: "Assertion Failed - kubelet is NOT installed"
+      success_msg: "Assertion Passed - kubelet is installed"
 
-- name: Check if kubectl is installed
-  ansible.builtin.command: which kubectl
-  register: kubectl_check
-  ignore_errors: true
-  changed_when: false
+  - name: Assert kubeadm is installed
+    ansible.builtin.assert:
+      that:
+        - kubeadm_check.rc == 0
+      fail_msg: "Assertion Failed - kubeadm is NOT installed"
+      success_msg: "kubeadm is installed"
 
-- name: Assert kubelet is installed
-  ansible.builtin.assert:
-    that:
-      - kubelet_check.rc == 0
-    fail_msg: "Assertion Failed - kubelet is NOT installed"
-    success_msg: "Assertion Passed - kubelet is installed"
-
-- name: Assert kubeadm is installed
-  ansible.builtin.assert:
-    that:
-      - kubeadm_check.rc == 0
-    fail_msg: "Assertion Failed - kubeadm is NOT installed"
-    success_msg: "kubeadm is installed"
-
-- name: Assert kubectl is installed
-  ansible.builtin.assert:
-    that:
-      - kubectl_check.rc == 0
-    fail_msg: "Assertion Failed - kubectl is NOT installed"
-    success_msg: "Assertion Passed - kubectl is installed"
-
+  - name: Assert kubectl is installed
+    ansible.builtin.assert:
+      that:
+        - kubectl_check.rc == 0
+      fail_msg: "Assertion Failed - kubectl is NOT installed"
+      success_msg: "Assertion Passed - kubectl is installed"
+  when: "'master' in group_names or 'workers' in group_names" 

@@ -38,27 +38,83 @@
 # kube-proxy endpoint
 # if prometheus is not running at the master node. 0.0.0.0 makes the metrics endpoint 
 # accessible from any interface, so it is better to secure it (TODO)
-- name: Wait for kube-proxy configmap to be available
-  ansible.builtin.command: kubectl -n kube-system get configmap kube-proxy
-  register: proxy_cm
-  retries: 6
-  delay: 10
-  until: proxy_cm.rc == 0
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
-    
-- name: Enable metrics endpoint for kube-proxy
-  ansible.builtin.shell: |
-    kubectl -n kube-system get configmap kube-proxy -o yaml | \
-    sed 's/metricsBindAddress: ""/metricsBindAddress: 0.0.0.0:10249/' | \
-    kubectl apply -f -
-  args:
-    executable: /bin/bash
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
+# Since kubectl command talks to api server, wait to make sure api server is up and healthy
+- name: Setup kube-proxy metrics (sequentially, on master)
+  block:
+    - name: Starting kube-proxy metrics enable block
+      ansible.builtin.debug:
+        msg: "+++++++++ Running kube-proxy metrics setup on {{ inventory_hostname }}"
+      delegate_to: "{{ groups['master'][0] }}"
+      run_once: true
 
-- name: Restart kube-proxy pods
-  ansible.builtin.shell: |
-    kubectl -n kube-system delete pod -l k8s-app=kube-proxy
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
+    - name: Wait for kube-proxy configmap to be available
+      ansible.builtin.command: kubectl -n kube-system get configmap kube-proxy
+      register: proxy_cm
+      retries: 15
+      delay: 5
+      until: proxy_cm.rc == 0
+      failed_when: proxy_cm.rc != 0
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      delegate_to: "{{ groups['master'][0] }}"
+      run_once: true
+
+    - name: Wait for Kubernetes API to respond
+      ansible.builtin.command: kubectl get --raw='/healthz'
+      register: api_health
+      retries: 15
+      delay: 5
+      until: api_health.rc == 0
+      failed_when: api_health.rc != 0
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      delegate_to: "{{ groups['master'][0] }}"
+      run_once: true
+
+    - name: Wait for kube-proxy configmap to be available
+      ansible.builtin.command: timeout 10s kubectl -n kube-system get configmap kube-proxy
+      register: proxy_cm
+      retries: 12
+      delay: 10
+      until: proxy_cm.rc == 0
+      failed_when: proxy_cm.rc != 0
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      delegate_to: "{{ groups['master'][0] }}"
+      run_once: true
+
+    # - name: Enable metrics endpoint for kube-proxy
+    #   ansible.builtin.shell: |
+    #     kubectl -n kube-system get configmap kube-proxy -o yaml | \
+    #     sed 's/metricsBindAddress: ""/metricsBindAddress: 0.0.0.0:10249/' | \
+    #     kubectl apply -f -
+    #   args:
+    #     executable: /bin/bash
+    #   environment:
+    #     KUBECONFIG: /etc/kubernetes/admin.conf
+    #   delegate_to: "{{ groups['master'][0] }}"
+    #   run_once: true
+
+    - name: Get kube-proxy configmap and modify it locally
+      ansible.builtin.shell: |
+        kubectl -n kube-system get configmap kube-proxy -o yaml > /tmp/kube-proxy.yaml
+        sed -i 's/metricsBindAddress: ""/metricsBindAddress: 0.0.0.0:10249/' /tmp/kube-proxy.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      delegate_to: "{{ groups['master'][0] }}"
+      run_once: true
+
+    - name: Apply modified kube-proxy configmap
+      ansible.builtin.command: kubectl apply -f /tmp/kube-proxy.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      delegate_to: "{{ groups['master'][0] }}"
+      run_once: true
+
+    - name: Restart kube-proxy pods
+      ansible.builtin.shell: |
+        kubectl -n kube-system delete pod -l k8s-app=kube-proxy
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      delegate_to: "{{ groups['master'][0] }}"
+      run_once: true

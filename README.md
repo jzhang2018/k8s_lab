@@ -5,9 +5,15 @@
 Master lab setup playbooK (including assertions): </br>
 ansible-playbook -i inventory/hosts.yml playbooks/setup/site.yml </br>
 
+
 Individual Lab Setup Playbooks: </br>
 ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_bootstrap_cluster.yml </br>
+Run all pre-requisites including local-mirror: </br>
 ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_pre_requisites.yml </br>
+Run pre-requisites local-mirror only: </br>
+ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_pre_requisites.yml --tags local-mirror </br>
+Run all pre-requisites excluding local-mirror: </br>
+ansible-playbook -i inventory/hosts.yml playbooks/setup/k8s_pre_requisites.yml --skip-tags local-mirror </br>
 
 Master helm setup playbook (including a sample testing case): </br>
 ansible-playbook -i inventory/hosts.yml playbooks/helm/site.yml </br>

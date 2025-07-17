@@ -3,12 +3,26 @@
 
 - name: System Prep
   ansible.builtin.include_tasks: sys_prep.yml
+  when: "'master' in group_names or 'workers' in group_names" 
 
 - name: Install Container Runtime CRI-O
   ansible.builtin.include_tasks: instl_crio.yml
+  when: "'master' in group_names or 'workers' in group_names" 
+
+- name: Configure Podman insecure registry
+  ansible.builtin.include_tasks: podman_http.yml
+  when: "'local_mirror' in group_names" 
+  tags: local-mirror
+  
+- name: Set up local mirror for CRI-O on Ansible controller
+  ansible.builtin.include_tasks: local_mirror_crio.yml
+  when: "'master' in group_names or 'workers' in group_names or 'local_mirror' in group_names"
+  tags: local-mirror
 
 - name: Install k8s Packages
   ansible.builtin.include_tasks: instl_pkg.yml
+  when: "'master' in group_names or 'workers' in group_names" 
 
 - name: Assertion test
   ansible.builtin.include_tasks: assert.yml
+  when: "'master' in group_names or 'workers' in group_names or 'local_mirror' in group_names"

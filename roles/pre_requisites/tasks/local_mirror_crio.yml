@@ -1,0 +1,74 @@
+---
+
+# The purpose of this play is to use local mirror is to avoid hitting Docker Hub pull rate limits
+
+#--------------- This tasks is executed on master, workers and local_mirror ---------------#  
+- name: Ensure registry hostname resolves on all nodes including local_mirror
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ local_registry_ip }} {{ local_registry_host }}"
+    state: present
+  tags: local-mirror
+
+#--------------- Following tasks are executed on local mirror registry ---------------#  
+- name: Clean up local registry container and pod
+  block:
+    - name: Stop and remove local registry container
+      containers.podman.podman_container:
+        name: "{{ local_registry_name }}"
+        state: absent
+      ignore_errors: true
+     
+    - name: Remove local registry pod if it exists
+      containers.podman.podman_pod:
+        name: "{{ local_registry_name }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Kill any process still using port 5000
+      ansible.builtin.shell: |
+        fuser -k 5000/tcp || true
+      become: true
+      changed_when: false
+      ignore_errors: true
+  when: "'local_mirror' in group_names"
+  tags: local-mirror
+
+- name: Ensure local registry container is running
+  containers.podman.podman_container:
+    name: "{{ local_registry_name }}"
+    image: docker.io/library/registry:2
+    state: started
+    restart_policy: always
+    ports:
+      - "{{ local_registry_port }}:5000"
+    volume:
+      - /opt/registry/data:/var/lib/registry:z
+  when: "'local_mirror' in group_names"
+  tags: local-mirror
+
+- name: Pull, tag, and push Calico images to local registry
+  block:
+    - name: Pull Calico image from Docker Hub
+      containers.podman.podman_image:
+        name: "docker.io/calico/{{ item }}:{{ calico_version }}"
+      loop: "{{ calico_images }}"
+
+    - name: Tag and push Calico image to local registry
+      ansible.builtin.shell: |
+        podman tag docker.io/calico/{{ item }}:{{ calico_version }} {{ local_registry_host }}:{{ local_registry_port }}/calico/{{ item }}:{{ calico_version }}
+        podman push {{ local_registry_host }}:{{ local_registry_port }}/calico/{{ item }}:{{ calico_version }}
+      loop: "{{ calico_images }}"
+  when: "'local_mirror' in group_names"
+  tags: local-mirror
+
+#--------------- This tasks is executed on master and workers ---------------# 
+- name: Configure CRI-O to use local registry mirror with drop-in config
+  ansible.builtin.template:
+    src: mirror-registry.conf.j2
+    dest: /etc/containers/registries.conf.d/01-local-mirror.conf
+    mode: '0644'
+  notify: Restart CRI-O
+  when: "'master' in group_names or 'workers' in group_names"
+  tags: local-mirror

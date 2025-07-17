@@ -1,0 +1,25 @@
+---
+
+# Allow Podman to push to an insecure local registry using HTTP, create an override 
+# file under /etc/containers/registries.conf.d/ and reload Podman to apply the changes
+- name: Ensure the registries.conf.d directory exists
+  ansible.builtin.file:
+    path: /etc/containers/registries.conf.d
+    state: directory
+    mode: '0755'
+  tags: local-mirror
+
+- name: Create insecure registry configuration
+  ansible.builtin.copy:
+    dest: /etc/containers/registries.conf.d/99-insecure-registry.conf
+    content: |
+      [[registry]]
+      location = "{{ local_registry_host }}:{{ local_registry_port }}"
+      insecure = true
+    mode: '0644'
+  notify:
+    - Restart Podman socket
+    - Restart Podman service
+  tags: local-mirror
+
+
