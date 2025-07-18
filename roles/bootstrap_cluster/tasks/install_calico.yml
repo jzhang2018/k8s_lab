@@ -1,5 +1,17 @@
 ---
 
+# Checking API server readiness before applying CNI ensures smooth, error-free Calico CNI deployment
+- name: Wait for Kubernetes API server is ready
+  ansible.builtin.shell: |
+    kubectl get --raw='/readyz' --request-timeout=5s
+  register: apiserver_ready
+  retries: 30
+  delay: 10
+  until: apiserver_ready.rc == 0
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
 - name: Apply Calico CNI with Overlay Networking mode using tigera-operator.yaml manifest
   ansible.builtin.shell: >
     kubectl apply --server-side --force-conflicts -f https://raw.githubusercontent.com/projectcalico/calico/{{ calico_version }}/manifests/{{ item }}

@@ -1,0 +1,61 @@
+---
+
+- name: Wait for Calico pods is running
+  ansible.builtin.shell: |
+    kubectl -n calico-system get pods -o json | jq -r \
+    '[.items[] | select(.status.phase != "Running")] | length'
+  register: calico_not_ready
+  retries: 20
+  delay: 10
+  until: calico_not_ready.stdout | int == 0
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Wait for kube-controller-manager is running
+  ansible.builtin.shell: |
+    kubectl get pods -n kube-system -l component=kube-controller-manager -o json | jq -r \
+    '[.items[] | select(.status.phase != "Running")] | length'
+  register: controllers_not_ready
+  retries: 20
+  delay: 10
+  until: controllers_not_ready.stdout | int == 0
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Wait for kube-scheduler is running
+  ansible.builtin.shell: |
+    kubectl get pods -n kube-system -l component=kube-scheduler -o json | jq -r \
+    '[.items[] | select(.status.phase != "Running")] | length'
+  register: schedulers_not_ready
+  retries: 20
+  delay: 10
+  until: schedulers_not_ready.stdout | int == 0
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Wait for kube-proxy is running
+  ansible.builtin.shell: |
+    kubectl -n kube-system get daemonset kube-proxy -o jsonpath='{.status.numberAvailable}'
+  register: kubeproxy_ready_count
+  retries: 20
+  delay: 10
+  until: kubeproxy_ready_count.stdout | int > 0
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Wait for CoreDNS is running
+  ansible.builtin.shell: |
+    kubectl get pods -n kube-system -l k8s-app=kube-dns -o json | jq -r \
+    '[.items[] | select(.status.phase != "Running")] | length'
+  register: coredns_not_ready
+  retries: 20
+  delay: 10
+  until: coredns_not_ready.stdout | int == 0
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: wait_for_coredns | default(true)

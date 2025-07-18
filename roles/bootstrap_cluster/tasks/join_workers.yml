@@ -1,11 +1,6 @@
 ---
 
-# ----------------------- Join worker nodes to master (on workers) --------------------- # 
-# - name: Join worker nodes
-#   hosts: workers
-#   gather_facts: false
-#   become: true
-  
+# ----------------------- Join worker nodes to master (on workers) --------------------- #   
 - name: Copy join script from Ansible controller to worker nodes
   ansible.builtin.copy:
     src: /tmp/k8s-join-command/kubeadm_join.sh

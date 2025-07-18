@@ -1,6 +1,4 @@
-- name: Assert API server health (from controller)
-  ansible.builtin.include_tasks: assert/assert_apiserver_healthcheck.yml
-  when: "'controller' in group_names"
+---
 
 - name: Assert kubelet is running
   ansible.builtin.include_tasks: assert/assert_kubelet.yml

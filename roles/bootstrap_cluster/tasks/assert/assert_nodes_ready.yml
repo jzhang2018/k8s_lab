@@ -1,7 +1,7 @@
 ---
 
 # ---------- Check if nodes are in 'Ready' state, including master and worker nodes ---------- #
-## TODO: check master and worker nodes against inventory
+
 - name: Check if kubectl can get 'Ready' state from nodes, including master and worker nodes
   ansible.builtin.command: kubectl get nodes -o wide --no-headers
   register: kubectl_nodes

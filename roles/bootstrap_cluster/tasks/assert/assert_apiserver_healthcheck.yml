@@ -3,7 +3,7 @@
 # --------- Check Kubernetes API server health via url --------- #
 - name: Check Kubernetes API server health via url
   ansible.builtin.uri:
-    url: "https://{{ groups['master'][0] }}:6443/healthz"
+    url: "https://{{ hostvars[groups['master'][0]]['ansible_host'] }}:6443/healthz"
     method: GET
     validate_certs: false
     status_code: 200
