@@ -15,28 +15,28 @@
     - name: Delete all K8s resources in the namespace
       ansible.builtin.shell: |
         kubectl delete all --all -n {{ ns }}
-      delegate_to: "{{ groups['master'][0] }}" 
+      delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}" 
       connection: ssh
       ignore_errors: true
 
     - name: Delete all PVCs in the namespace
       ansible.builtin.shell: |
         kubectl delete pvc --all -n {{ ns }}
-      delegate_to: "{{ groups['master'][0] }}" 
+      delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}" 
       connection: ssh
       ignore_errors: true
 
     - name: Delete all ConfigMaps in the namespace
       ansible.builtin.shell: |
         kubectl delete configmap --all -n {{ ns }}
-      delegate_to: "{{ groups['master'][0] }}" 
+      delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}" 
       connection: ssh
       ignore_errors: true
 
     - name: Delete all Secrets in the namespace
       ansible.builtin.shell: |
         kubectl delete secret --all -n {{ ns }}
-      delegate_to: "{{ groups['master'][0] }}"
+      delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}"
       connection: ssh
       ignore_errors: false
       changed_when: "'Release not loaded' not in helm_uninstall.stderr"
@@ -45,7 +45,7 @@
     - name: Delete namespace
       ansible.builtin.shell: |
         kubectl delete namespace {{ ns }}
-      delegate_to: "{{ groups['master'][0] }}" 
+      delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}" 
       connection: ssh
       register: delete_ns
       failed_when: false
@@ -58,7 +58,7 @@
       delay: 2
       register: wait_result
       until: wait_result.rc == 0
-      delegate_to: "{{ groups['master'][0] }}" 
+      delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}" 
       connection: ssh
       ignore_errors: true
 
@@ -68,14 +68,7 @@
       register: delete_crd
       failed_when: false
       changed_when: false
-      delegate_to: "{{ groups['master'][0] }}"
+      delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}"
       connection: ssh
       loop_control:
         label: "{{ item }}"
-
-    # - name: Mark CRD delete as changed if not NotFound
-    #   ansible.builtin.debug:
-    #     msg: "CRD '{{ item.item }}' deleted or attempted"
-    #   loop: "{{ delete_crd.results }}"
-    #   when: "'NotFound' not in item.stderr"
-    #   changed_when: true

@@ -1,10 +1,7 @@
 ---
 - name: Deploy kube-prometheus-stack
   hosts: mon_stack
-  connection: local
-  gather_facts: no
-  environment:
-    KUBECONFIG: "{{ kubeconfig_path }}" 
+  gather_facts: false
 
   roles:
     - mon_stack_wrapper

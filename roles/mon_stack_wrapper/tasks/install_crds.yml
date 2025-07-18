@@ -6,16 +6,26 @@
 # tries to install the CRDs or custom resources like PrometheusRule. So install CRDs separately
 # as the pre-task for kube-prometheus-stack full installlation.
 
-- name: Remove existing kube-prometheus-stack chart directory (if any)
+- name: Remove existing kube-prometheus-stack chart directory on ansible controller (if any)
   ansible.builtin.file:
     path: /tmp/kube-prometheus-stack
     state: absent
+  delegate_to: localhost  
   run_once: true
 
 - name: Download kube-prometheus-stack chart on ansible controller
   ansible.builtin.command:
     cmd: "helm pull prometheus-community/kube-prometheus-stack --version {{ helm_chart_version }} --untar"
     chdir: /tmp
+  delegate_to: localhost
+  run_once: true
+
+- name: Ensure temp CRD directory on master node
+  ansible.builtin.file:
+    path: /tmp/kube-prometheus-stack-crds
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}"
   run_once: true
 
 - name: Copy CRDs to master node
@@ -26,7 +36,8 @@
     mode: "0644"
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-  delegate_to: "{{ groups['master'][0] }}"
+  delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}"
+  run_once: true
   with_fileglob:
     - "/tmp/kube-prometheus-stack/charts/crds/crds/*.yaml"
 
@@ -35,7 +46,7 @@
     paths: /tmp/kube-prometheus-stack-crds
     patterns: "*.yaml"
   register: crd_files
-  delegate_to: "{{ groups['master'][0] }}"
+  delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}"
   connection: ssh
   run_once: true
 
@@ -44,7 +55,10 @@
 - name: Replace CRDs forcefully using 'kubectl relace --force'
   ansible.builtin.command: "kubectl replace --force -f {{ item.path }}"
   loop: "{{ crd_files.files }}"
-  delegate_to: "{{ groups['master'][0] }}"
+  delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}"
+  run_once: true
   connection: ssh
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}" 
   no_log: true
 

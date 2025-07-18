@@ -6,7 +6,7 @@
   register: crd_list
   changed_when: false
   failed_when: crd_list.rc != 0
-  delegate_to: "{{ groups['master'][0] }}"  # execute on master node
+  delegate_to: "{{ hostvars[groups['master'][0]].ansible_host }}"  # execute on master node
 
 - name: Debug - print out CRDs in monitoring stack group
   ansible.builtin.debug:
