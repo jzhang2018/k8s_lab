@@ -1,0 +1,37 @@
+---
+
+- name: Assert API server health (from controller)
+  ansible.builtin.include_tasks: assert/assert_apiserver_healthcheck.yml
+  when: "'controller' in group_names"
+
+- name: Assert kubelet is running
+  ansible.builtin.include_tasks: assert/assert_kubelet.yml
+  when: "'master' in group_names or 'workers' in group_names"
+
+- name: Assert CNI config exists
+  ansible.builtin.include_tasks: assert/assert_cni.yml
+  when: "'master' in group_names or 'workers' in group_names"
+
+- name: Assert API server process
+  ansible.builtin.include_tasks: assert/assert_apiserver_process.yml
+  when: "'master' in group_names"
+
+- name: Assert Controller Manager process
+  ansible.builtin.include_tasks: assert/assert_controller_process.yml
+  when: "'master' in group_names"
+
+- name: Assert nodes Ready state
+  ansible.builtin.include_tasks: assert/assert_nodes_ready.yml
+  when: "'master' in group_names"
+
+- name: Assert component statuses are healthy
+  ansible.builtin.include_tasks: assert/assert_component_status.yml
+  when: "'master' in group_names"
+
+- name: Assert kubeconfig exists
+  ansible.builtin.include_tasks: assert/assert_kubeconfig.yml
+  when: "'master' in group_names"
+
+- name: Assert CoreDNS config and functionality
+  ansible.builtin.include_tasks: assert/assert_coredns.yml
+  when: "'master' in group_names"

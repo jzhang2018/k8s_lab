@@ -1,7 +1,0 @@
----
-
-- name: Patch CoreDNS
-  ansible.builtin.include_tasks: patch.yml
-
-- name: Assertion test
-  ansible.builtin.include_tasks: assert.yml

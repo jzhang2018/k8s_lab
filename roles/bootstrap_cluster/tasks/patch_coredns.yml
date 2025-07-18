@@ -1,0 +1,53 @@
+---
+
+# Patch CoreDNS to use public DNS servers instead of /etc/resolv.conf which pointed to an unreachable internal stub resolver
+# Run immediately after kubeadm init and after the CoreDNS ConfigMap exists
+# Only need to run on control plane (master node). If there are more than one master nodes, run only once (i.e., masters[0])
+- name: Patch CoreDNS to use public DNS servers
+  kubernetes.core.k8s:
+    kubeconfig: /etc/kubernetes/admin.conf
+    state: present
+    kind: ConfigMap
+    namespace: kube-system
+    name: coredns
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: coredns
+        namespace: kube-system
+      data:
+        Corefile: |
+          .:53 {
+              errors
+              health
+              ready
+              kubernetes cluster.local in-addr.arpa ip6.arpa {
+                  pods insecure
+                  fallthrough in-addr.arpa ip6.arpa
+              }
+              prometheus :9153
+              forward . 8.8.8.8 1.1.1.1 {
+                  max_concurrent 1000
+              }
+              cache 30
+              loop
+              reload
+              loadbalance
+          }
+
+- name: Restart CoreDNS deployment
+  kubernetes.core.k8s:
+    kubeconfig: /etc/kubernetes/admin.conf
+    state: present
+    kind: Deployment
+    namespace: kube-system
+    name: coredns
+    wait: yes
+    wait_timeout: 120
+    definition:
+      spec:
+        template:
+          metadata:
+            annotations:
+              kubectl.kubernetes.io/restartedAt: "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }}"

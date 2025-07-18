@@ -1,0 +1,14 @@
+---
+
+# ----------------------- Join worker nodes to master (on workers) --------------------- #   
+- name: Copy join script from Ansible controller to worker nodes
+  ansible.builtin.copy:
+    src: /tmp/k8s-join-command/kubeadm_join.sh
+    dest: /tmp/kubeadm_join.sh
+    mode: '0755'
+
+- name: Run kubeadm join
+  ansible.builtin.command: sh /tmp/kubeadm_join.sh
+  args:
+    creates: /etc/kubernetes/kubelet.conf
+  changed_when: false

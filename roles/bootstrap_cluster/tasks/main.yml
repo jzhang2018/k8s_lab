@@ -1,0 +1,26 @@
+---
+# tasks file for bootstrap_cluster
+
+- ansible.builtin.include_tasks: init_master.yml
+  when: "'master' in group_names"
+
+- ansible.builtin.include_tasks: join_workers.yml
+  when: "'workers' in group_names"
+
+- ansible.builtin.include_tasks: patch_kubelet_dns.yml
+  when: "'master' in group_names or 'workers' in group_names" 
+
+- ansible.builtin.include_tasks: install_calico.yml
+  when: "'master' in group_names"
+
+- ansible.builtin.include_tasks: patch_coredns.yml
+  when: "'master' in group_names"
+
+- ansible.builtin.include_tasks: cluster_readiness.yml
+  when: "'master' in group_names"
+
+- ansible.builtin.include_tasks: enable_endpoints.yml
+  when: "'master' in group_names"
+
+# ------------------------ Assertions ------------------------ #
+- ansible.builtin.include_tasks: assert_all.yml

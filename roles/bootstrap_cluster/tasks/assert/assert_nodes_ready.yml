@@ -1,0 +1,18 @@
+---
+
+# ---------- Check if nodes are in 'Ready' state, including master and worker nodes ---------- #
+
+- name: Check if kubectl can get 'Ready' state from nodes, including master and worker nodes
+  ansible.builtin.command: kubectl get nodes -o wide --no-headers
+  register: kubectl_nodes
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Assert - kubectl to get 'Ready' state from nodes
+  ansible.builtin.assert:
+    that:
+      - "'NotReady' not in kubectl_nodes.stdout"
+      - "'Ready' in kubectl_nodes.stdout"
+    fail_msg: "Assertion Failed - kubectl cannot get 'Ready' state from nodes"
+    success_msg: "Assertion PASSED - kubectl can get 'Ready' state from nodes"

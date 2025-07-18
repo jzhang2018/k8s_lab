@@ -1,0 +1,56 @@
+---
+
+# Checking API server readiness before applying CNI ensures smooth, error-free Calico CNI deployment
+- name: Wait for Kubernetes API server is ready
+  ansible.builtin.shell: |
+    kubectl get --raw='/readyz' --request-timeout=5s
+  register: apiserver_ready
+  retries: 30
+  delay: 10
+  until: apiserver_ready.rc == 0
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Apply Calico CNI with Overlay Networking mode using tigera-operator.yaml manifest
+  ansible.builtin.shell: >
+    kubectl apply --server-side --force-conflicts -f https://raw.githubusercontent.com/projectcalico/calico/{{ calico_version }}/manifests/{{ item }}
+  loop:
+    - 'operator-crds.yaml'    # Custom Resource Definitions (CRDs)
+    - 'tigera-operator.yaml'  # Tigera Calico Operator
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf  # for ansible_user to run kubectl command
+  register: calico_apply_result
+  failed_when: calico_apply_result.rc != 0
+  changed_when: false
+
+- name: Wait a few seconds for CRDs to register
+  ansible.builtin.pause:
+    seconds: 5
+  
+- name: Apply custom Calico installation manifest (disable BGP, enable encapsulation)
+  ansible.builtin.copy:
+    dest: /tmp/calico-installation.yaml
+    content: |
+      apiVersion: operator.tigera.io/v1
+      kind: Installation
+      metadata:
+        name: default
+      spec:
+        registry: "{{ local_registry_host }}:{{ local_registry_port }}"
+        calicoNetwork:
+          bgp: Disabled
+          ipPools:
+          - blockSize: 26
+            cidr: 192.168.0.0/16
+            encapsulation: VXLANCrossSubnet
+            natOutgoing: Enabled
+            nodeSelector: all()
+  changed_when: false
+
+- name: Apply Calico Installation
+  ansible.builtin.shell: >
+    kubectl apply --server-side --force-conflicts -f /tmp/calico-installation.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false

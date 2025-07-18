@@ -1,0 +1,8 @@
+---
+
+- name: Configurations for all nodes (master and worker)
+  hosts: master, workers, local_mirror
+  gather_facts: false
+  become: true
+  roles:
+    - roles/pre_requisites

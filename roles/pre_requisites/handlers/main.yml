@@ -1,0 +1,25 @@
+---
+# handlers file for pre_requisites
+
+- name: Restart CRI-O
+  ansible.builtin.service:
+    name: crio
+    state: restarted
+
+- name: Restart Podman socket
+  systemd:
+    name: podman.socket
+    state: restarted
+    enabled: true
+  delegate_to: localhost
+  run_once: true
+  ignore_errors: true
+
+- name: Restart Podman service
+  systemd:
+    name: podman
+    state: restarted
+    enabled: true
+  delegate_to: localhost
+  run_once: true
+  ignore_errors: true

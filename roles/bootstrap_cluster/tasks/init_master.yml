@@ -1,0 +1,51 @@
+---
+# tasks file for bootstrap_cluster
+
+- name: Template kubeadm config file
+  ansible.builtin.template:
+    src: kubeadm-config.yml.j2
+    dest: /tmp/kubeadm-config.yml
+    mode: '0644'
+
+- name: Initialize Kubernetes cluster
+  ansible.builtin.command: kubeadm init --config=/tmp/kubeadm-config.yml
+  args:
+    creates: /etc/kubernetes/admin.conf
+  register: kubeadm_output
+
+- name: Create .kube directory under k8s user
+  ansible.builtin.file:
+    path: "/home/{{ k8s_user }}/.kube"
+    state: directory
+    owner: "{{ k8s_user }}"
+    group: "{{ k8s_user }}"
+    mode: '0755'
+
+- name: Copy kube config to k8s user's kube config
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ k8s_user }}/.kube/config"
+    remote_src: true # avoid to check source on local host (ansible controller)
+    owner: "{{ k8s_user }}"
+    group: "{{ k8s_user }}"
+    mode: '0600'
+
+- name: Fetch kube config from master node to Ansible controller for Ansible k8s work (K8s core and helm)
+  ansible.builtin.fetch:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    flat: true
+
+# K8s provides a join command that includes a token and the master node’s IP address to
+# allow worker nodes to connect to the cluster
+- name: Save join command on master node
+  ansible.builtin.shell: |
+    kubeadm token create --print-join-command > /tmp/kubeadm_join.sh
+  when: "'/tmp/kubeadm_join.sh' not in kubeadm_output.stdout"
+  changed_when: false
+
+- name: Fetch join command to Ansible controller from master node for later use
+  ansible.builtin.fetch:
+    src: /tmp/kubeadm_join.sh
+    dest: /tmp/k8s-join-command/
+    flat: true
