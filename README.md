@@ -41,7 +41,7 @@ ansible-playbook -i inventory/hosts.yml -l cleanup_host playbooks/cleanup/cleanu
 -e "{\"rn\": \"kube-prometheus-stack\", \"ns\": \"k8s-monitoring\", \"crds\": [\"alertmanagers.monitoring.coreos.com\", \"podmonitors.monitoring.coreos.com\", \"prometheuses.monitoring.coreos.com\", \"prometheusrules.monitoring.coreos.com\", \"servicemonitors.monitoring.coreos.com\", \"thanosrulers.monitoring.coreos.com\"]}" </br>
 
 Install k8s Monitoring Stack
-ansible-playbook -i inventory/hosts.yml playbooks/mon/install_mon_stack.yml --ask-vault-pass </br>
+ansible-playbook -i inventory/hosts.yml -l mon_stack_host playbooks/mon/install_mon_stack.yml --ask-vault-pass </br>
 
 Install k8s CD Tool - Argo CD
 ansible-playbook -i inventory/hosts.yml -l argo_cd_host playbooks/devops/instl_argo_cd.yml </br>
